@@ -127,6 +127,14 @@ td.mono a:hover { border-bottom-color: var(--accent-ink); }
 .stat.neutral .dot { background: var(--ink-soft); }
 
 /* ── control panel ───────────────────────────────────────────── */
+.mode-row { display: flex; gap: 10px; margin-bottom: 16px; }
+.mode-btn {
+  flex: 1; padding: 13px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  color: var(--ink-soft); transition: border-color .15s, color .15s, background .15s;
+}
+.mode-btn:hover { border-color: #C7CCD6; }
+.mode-btn.active { background: var(--ink); color: white; border-color: var(--ink); }
 .panel {
   background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
   padding: 20px 22px; margin-bottom: 36px; display: flex; align-items: center; justify-content: space-between; gap: 20px; flex-wrap: wrap;
@@ -204,7 +212,6 @@ def _status_pill(status: str) -> str:
 def _shell(title: str, active: str, body: str) -> str:
     nav_items = [
         ("/", "Overview"),
-        ("/dashboard/upload", "Upload Invoice"),
         ("/dashboard/pending", "Pending Review"),
         ("/dashboard/processed", "Processed"),
         ("/dashboard/approved", "Approved"),
@@ -316,7 +323,13 @@ async def dashboard():
     </a>
   </div>
 
-  <div class="panel">
+  <div class="section-head" style="margin-bottom:10px;"><h2>Process Invoices</h2></div>
+  <div class="mode-row">
+    <button id="modeMailboxBtn" class="mode-btn active" onclick="showMode('mailbox')">📬 Process Mailbox</button>
+    <button id="modeUploadBtn" class="mode-btn" onclick="showMode('upload')">📄 Upload Invoice Manually</button>
+  </div>
+
+  <div id="mailboxPanel" class="panel">
     <div class="txt">
       <h2>Run processing now</h2>
       <p>Drains every email currently in the ToBeProcessed folder through the pipeline above.</p>
@@ -328,7 +341,83 @@ async def dashboard():
   </div>
   <pre id="result" class="result"></pre>
 
+  <div id="uploadPanel" class="panel" style="display:none;">
+    <div class="txt" style="flex:1;">
+      <h2>Upload Invoice Manually</h2>
+      <p>Upload an invoice PDF directly — it runs through the exact same pipeline as a mailbox
+      submission (extraction, ERP lookup, 3-way match, notification), ending up in Pending Review,
+      Processed, Approved, or Exceptions, same as always.</p>
+      <input type="file" id="invoiceFile" accept="application/pdf"
+        style="display:block; margin:12px 0; font-size:13.5px;">
+    </div>
+    <div>
+      <button id="uploadBtn" class="run" onclick="uploadInvoice()">Upload &amp; Process</button>
+      <div id="uploadStatus" class="status"></div>
+    </div>
+  </div>
+  <pre id="uploadResult" class="result"></pre>
+
 <script>
+  function showMode(mode) {{
+    const isMailbox = mode === 'mailbox';
+    document.getElementById('mailboxPanel').style.display = isMailbox ? 'flex' : 'none';
+    document.getElementById('uploadPanel').style.display = isMailbox ? 'none' : 'flex';
+    document.getElementById('modeMailboxBtn').classList.toggle('active', isMailbox);
+    document.getElementById('modeUploadBtn').classList.toggle('active', !isMailbox);
+  }}
+
+  async function uploadInvoice() {{
+    const fileInput = document.getElementById('invoiceFile');
+    const btn = document.getElementById('uploadBtn');
+    const statusEl = document.getElementById('uploadStatus');
+    const resultEl = document.getElementById('uploadResult');
+
+    if (!fileInput.files.length) {{
+      statusEl.textContent = 'Choose a PDF file first.';
+      statusEl.className = 'status err';
+      return;
+    }}
+    if (!TRIGGER_SECRET) {{
+      statusEl.textContent = 'AP_TRIGGER_SECRET is not set on the server.';
+      statusEl.className = 'status err';
+      return;
+    }}
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    btn.disabled = true;
+    statusEl.textContent = 'Uploading & processing… this can take a little while.';
+    statusEl.className = 'status';
+    resultEl.style.display = 'none';
+
+    try {{
+      const res = await fetch('/api/upload-invoice', {{
+        method: 'POST',
+        headers: {{ 'X-Trigger-Secret': TRIGGER_SECRET }},
+        body: formData,
+      }});
+      const text = await res.text();
+      let pretty = text;
+      try {{ pretty = JSON.stringify(JSON.parse(text), null, 2); }} catch (e) {{}}
+
+      if (res.ok) {{
+        statusEl.textContent = 'Done.';
+        statusEl.className = 'status ok';
+      }} else {{
+        statusEl.textContent = 'Request failed (HTTP ' + res.status + ').';
+        statusEl.className = 'status err';
+      }}
+      resultEl.textContent = pretty;
+      resultEl.style.display = 'block';
+    }} catch (e) {{
+      statusEl.textContent = 'Network error: ' + e.message;
+      statusEl.className = 'status err';
+    }} finally {{
+      btn.disabled = false;
+    }}
+  }}
+
   const TRIGGER_SECRET = {trigger_secret!r};
 
   async function runProcess() {{
@@ -973,91 +1062,6 @@ async def upload_invoice(file: UploadFile = File(...), x_trigger_secret: str = H
             [f"Unexpected error while processing this invoice: {e}"],
             invoice_data=invoice_data, po_number=po_number,
         )
-
-
-@app.get("/dashboard/upload", response_class=HTMLResponse)
-async def dashboard_upload():
-    """
-    Upload a test/real invoice PDF directly — no need to email it to the
-    mailbox first. Runs through the exact same pipeline as a mailbox
-    submission, ending up in Pending Review, Processed, Approved, or
-    Exceptions exactly like any other invoice.
-    """
-    trigger_secret = os.getenv("AP_TRIGGER_SECRET", "")
-    body = f"""
-  <a class="back" href="/">← Overview</a>
-  <div class="section-head"><h2>Upload Invoice</h2></div>
-  <p style="font-size:13px; color:var(--muted); margin:-4px 0 18px;">
-    Upload an invoice PDF directly to test the agent — it runs through the exact same
-    pipeline as a mailbox submission (extraction, ERP lookup, 3-way match, notification).
-    The result lands in Pending Review, Processed, Approved, or Exceptions, same as always.
-  </p>
-
-  <div class="card">
-    <input type="file" id="invoiceFile" accept="application/pdf"
-      style="display:block; margin-bottom:14px; font-size:13.5px;">
-    <button id="uploadBtn" class="run" onclick="uploadInvoice()">Upload & Process</button>
-    <div id="uploadStatus" class="status"></div>
-  </div>
-  <pre id="uploadResult" class="result"></pre>
-
-<script>
-  const TRIGGER_SECRET = {trigger_secret!r};
-
-  async function uploadInvoice() {{
-    const fileInput = document.getElementById('invoiceFile');
-    const btn = document.getElementById('uploadBtn');
-    const statusEl = document.getElementById('uploadStatus');
-    const resultEl = document.getElementById('uploadResult');
-
-    if (!fileInput.files.length) {{
-      statusEl.textContent = 'Choose a PDF file first.';
-      statusEl.className = 'status err';
-      return;
-    }}
-    if (!TRIGGER_SECRET) {{
-      statusEl.textContent = 'AP_TRIGGER_SECRET is not set on the server.';
-      statusEl.className = 'status err';
-      return;
-    }}
-
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-
-    btn.disabled = true;
-    statusEl.textContent = 'Uploading & processing… this can take a little while.';
-    statusEl.className = 'status';
-    resultEl.style.display = 'none';
-
-    try {{
-      const res = await fetch('/api/upload-invoice', {{
-        method: 'POST',
-        headers: {{ 'X-Trigger-Secret': TRIGGER_SECRET }},
-        body: formData,
-      }});
-      const text = await res.text();
-      let pretty = text;
-      try {{ pretty = JSON.stringify(JSON.parse(text), null, 2); }} catch (e) {{}}
-
-      if (res.ok) {{
-        statusEl.textContent = 'Done.';
-        statusEl.className = 'status ok';
-      }} else {{
-        statusEl.textContent = 'Request failed (HTTP ' + res.status + ').';
-        statusEl.className = 'status err';
-      }}
-      resultEl.textContent = pretty;
-      resultEl.style.display = 'block';
-    }} catch (e) {{
-      statusEl.textContent = 'Network error: ' + e.message;
-      statusEl.className = 'status err';
-    }} finally {{
-      btn.disabled = false;
-    }}
-  }}
-</script>
-"""
-    return _shell("Upload Invoice", "/dashboard/upload", body)
 
 
 @app.post("/api/process")
