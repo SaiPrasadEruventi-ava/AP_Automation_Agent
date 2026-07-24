@@ -402,18 +402,21 @@ async def dashboard():
       try {{ pretty = JSON.stringify(JSON.parse(text), null, 2); }} catch (e) {{}}
 
       if (res.ok) {{
-        statusEl.textContent = 'Done.';
+        statusEl.textContent = 'Done — reloading…';
         statusEl.className = 'status ok';
+        resultEl.textContent = pretty;
+        resultEl.style.display = 'block';
+        setTimeout(() => location.reload(), 1800);
       }} else {{
         statusEl.textContent = 'Request failed (HTTP ' + res.status + ').';
         statusEl.className = 'status err';
+        resultEl.textContent = pretty;
+        resultEl.style.display = 'block';
+        btn.disabled = false;
       }}
-      resultEl.textContent = pretty;
-      resultEl.style.display = 'block';
     }} catch (e) {{
       statusEl.textContent = 'Network error: ' + e.message;
       statusEl.className = 'status err';
-    }} finally {{
       btn.disabled = false;
     }}
   }}
