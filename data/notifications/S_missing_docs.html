@@ -1,0 +1,76 @@
+<html><head></head><body><style>
+body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:0;
+     background:#f0f2f5;color:#2c3e50}
+.wrap{max-width:780px;margin:24px auto;border-radius:12px;
+      overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.13)}
+.topbar{height:6px}
+.hdr{padding:28px 32px 20px;color:#fff}
+.hdr h1{margin:0 0 4px;font-size:22px;font-weight:700;letter-spacing:-.3px}
+.hdr p{margin:0;font-size:13px;opacity:.88}
+.body{background:#fff;padding:28px 32px}
+.summary-box{border-radius:8px;padding:16px 20px;margin-bottom:24px;
+             font-size:14px;line-height:1.75;border-left:5px solid}
+.section{margin-bottom:24px}
+.section-title{font-size:12px;font-weight:700;letter-spacing:.8px;
+               text-transform:uppercase;color:#7f8c8d;margin:0 0 10px;
+               padding-bottom:6px;border-bottom:1px solid #ecf0f1}
+table.data{width:100%;border-collapse:collapse;font-size:13px}
+table.data td,table.data th{padding:9px 12px;text-align:left;
+  border-bottom:1px solid #f0f0f0}
+table.data th{background:#f8f9fa;color:#555;font-weight:600;
+              font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+table.data tr:last-child td{border-bottom:none}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;
+      border-radius:20px;letter-spacing:.3px}
+.pill-pass{background:#d5f5e3;color:#1e8449}
+.pill-fail{background:#fdedec;color:#cb4335}
+.pill-warn{background:#fef9e7;color:#b7950b}
+.pill-info{background:#eaf4fb;color:#1a5276}
+.pill-dup {background:#f5eef8;color:#6c3483}
+.checklist{list-style:none;margin:0;padding:0}
+.checklist li{padding:8px 0;border-bottom:1px solid #f0f0f0;
+              font-size:13px;display:flex;align-items:flex-start;gap:10px}
+.checklist li:last-child{border-bottom:none}
+.chk-icon{font-size:16px;min-width:20px;margin-top:1px}
+.diff-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.diff-tbl th{background:#f8f9fa;padding:9px 12px;text-align:left;
+             font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+             color:#555;font-weight:600;border-bottom:2px solid #e0e0e0}
+.diff-tbl td{padding:9px 12px;border-bottom:1px solid #f5f5f5;vertical-align:top}
+.diff-tbl tr:last-child td{border-bottom:none}
+.val-match{color:#1e8449;font-weight:600}
+.val-miss {color:#cb4335;font-weight:600}
+.val-warn {color:#b7950b;font-weight:600}
+.val-neutral{color:#2c3e50}
+.arrow{color:#aaa;margin:0 6px;font-size:11px}
+.mismatch-row{background:#fff8f8}
+.match-row{background:#f9fffa}
+.decision-banner{border-radius:8px;padding:18px 22px;margin-top:24px;
+                 display:flex;align-items:center;gap:14px}
+.decision-icon{font-size:32px;min-width:42px}
+.decision-text h3{margin:0 0 3px;font-size:16px;font-weight:700}
+.decision-text p{margin:0;font-size:13px;opacity:.85}
+.footer{background:#f8f9fa;padding:16px 32px;font-size:11px;
+        color:#95a5a6;border-top:1px solid #ecf0f1;text-align:center}
+.doc-card{border:1px solid #e8e8e8;border-radius:8px;padding:14px 16px;
+          margin-bottom:10px}
+.doc-card-title{font-size:11px;font-weight:700;letter-spacing:.6px;
+                text-transform:uppercase;color:#888;margin:0 0 8px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.kv{display:flex;justify-content:space-between;font-size:13px;
+    padding:3px 0;border-bottom:1px dotted #f0f0f0}
+.kv:last-child{border-bottom:none}
+.kv-label{color:#888;font-weight:500}
+.kv-value{font-weight:600;color:#2c3e50;text-align:right;max-width:60%}
+.scenario-badge{display:inline-flex;align-items:center;gap:8px;
+               border-radius:6px;padding:10px 16px;font-size:13px;
+               font-weight:600;margin-bottom:20px}
+.amount-highlight{font-size:26px;font-weight:700;letter-spacing:-.5px}
+.amount-sub{font-size:12px;opacity:.7;margin-top:2px}
+.delta-positive{color:#cb4335}
+.delta-negative{color:#1e8449}
+.tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;
+     letter-spacing:.4px;text-transform:uppercase;vertical-align:middle;
+     margin-left:4px}
+</style><div class='wrap'><div class='topbar' style='background:#616a6b'></div><div class='hdr' style='background:#616a6b'><h1>❗ AP Invoice Processing — Incomplete Submission</h1><p>Cannot proceed: one or more required documents are missing</p></div><div class='body'><div class='summary-box' style='background:#f8f9fa;border-color:#616a6b'>Invoice INV-X001 from Unknown Vendor was processed against Purchase Order N/A. The 3-way matching engine compared all header fields, line items, quantities, prices, tax rates, freight charges and payment terms. Final Decision: Incomplete — Missing Documents.</div><div class='section'><p class='section-title'>📎 Document Checklist</p><ul class='checklist'><li><span class='chk-icon'>✅</span><span style='color:#1e8449'><strong>Invoice</strong></span><span style='color:#666;font-size:12px;margin-left:4px'>— Received</span></li><li><span class='chk-icon'>❌</span><span style='color:#c0392b'><strong>Purchase Order</strong></span><span style='color:#666;font-size:12px;margin-left:4px'>— MISSING — required to proceed</span></li><li><span class='chk-icon'>❌</span><span style='color:#c0392b'><strong>GRN</strong></span><span style='color:#666;font-size:12px;margin-left:4px'>— MISSING — required to proceed</span></li></ul></div><div class='section'><p class='section-title'>ℹ️ Next Steps</p><div style='background:#eaf4fb;border-radius:8px;padding:16px;font-size:13px;line-height:1.8'><p style='margin:0 0 8px;font-weight:600'>Please resend the email with <em>all three</em> documents attached:</p><ul style='margin:0;padding-left:20px;color:#555'><li><strong>Invoice PDF</strong> — filename should contain <code>Invoice</code> or <code>INV</code></li><li><strong>Purchase Order PDF</strong> — filename should contain <code>PO</code> or <code>PurchaseOrder</code></li><li><strong>GRN PDF</strong> — filename should contain <code>GRN</code> or <code>GoodsReceipt</code></li></ul></div></div><div class='decision-banner' style='background:#f8f9fa;border:2px solid #616a6b'><span class='decision-icon'>❗</span><div class='decision-text'><h3 style='color:#616a6b'>Incomplete — Missing Documents</h3><p>Missing: Purchase Order, GRN. Resend all 3 attachments to reprocess.</p></div></div><div class='footer'>AP Automation Agent &nbsp;·&nbsp; 29 Jun 2026 07:05 &nbsp;·&nbsp; Email moved to <strong>Exceptions</strong> folder</div></div></div></body></html>

@@ -1,0 +1,13 @@
+# Extra dependencies only needed for LOCAL development/testing — do
+# NOT ship these to Vercel (keeps cold starts fast and avoids
+# native-build dependencies the serverless build image doesn't need).
+-r requirements.txt
+
+# Running approval_portal.py directly with `python approval_portal.py`
+# locally (Vercel invokes the ASGI app itself, no uvicorn needed there)
+uvicorn>=0.27.0
+
+# migrate_erp_to_redis.py reads the legacy Excel workbook once, locally,
+# to seed Redis before your first deploy.
+pandas>=2.0.0
+openpyxl>=3.1.0

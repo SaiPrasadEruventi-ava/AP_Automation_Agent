@@ -1,0 +1,23 @@
+# AP Automation Agent v3.2 — Microsoft Graph + Gmail
+# Vercel deployment requirements (lean — this is what actually ships
+# to the serverless function). pandas/openpyxl/uvicorn are NOT needed
+# here anymore: ERP data now lives in Redis, and Vercel runs the
+# FastAPI app directly (no uvicorn server process to manage).
+# See requirements-local.txt for local-dev-only extras.
+
+msal>=1.28.0
+requests>=2.31.0
+google-api-python-client>=2.140.0
+google-auth>=2.34.0
+google-auth-oauthlib>=1.2.0
+langchain-mistralai>=0.2.0
+langchain-core>=0.3.0
+pdfplumber>=0.11.0
+python-dotenv>=1.0.0
+
+# ── Redis (ERP data, pending HITL reviews, processed-invoice log) ──
+upstash-redis>=1.1.0
+
+# ── Web Approval Portal (clickable HITL decision links) ────────────
+fastapi>=0.110.0
+python-multipart>=0.0.9

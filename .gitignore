@@ -1,0 +1,19 @@
+# Secrets — never commit real credentials
+.env
+gmail_token.json
+gmail_oauth_client.json
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Vercel
+.vercel
+
+# OS
+.DS_Store

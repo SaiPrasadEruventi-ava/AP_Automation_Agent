@@ -1,0 +1,76 @@
+<html><head></head><body><style>
+body{font-family:'Segoe UI',Arial,sans-serif;margin:0;padding:0;
+     background:#f0f2f5;color:#2c3e50}
+.wrap{max-width:780px;margin:24px auto;border-radius:12px;
+      overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.13)}
+.topbar{height:6px}
+.hdr{padding:28px 32px 20px;color:#fff}
+.hdr h1{margin:0 0 4px;font-size:22px;font-weight:700;letter-spacing:-.3px}
+.hdr p{margin:0;font-size:13px;opacity:.88}
+.body{background:#fff;padding:28px 32px}
+.summary-box{border-radius:8px;padding:16px 20px;margin-bottom:24px;
+             font-size:14px;line-height:1.75;border-left:5px solid}
+.section{margin-bottom:24px}
+.section-title{font-size:12px;font-weight:700;letter-spacing:.8px;
+               text-transform:uppercase;color:#7f8c8d;margin:0 0 10px;
+               padding-bottom:6px;border-bottom:1px solid #ecf0f1}
+table.data{width:100%;border-collapse:collapse;font-size:13px}
+table.data td,table.data th{padding:9px 12px;text-align:left;
+  border-bottom:1px solid #f0f0f0}
+table.data th{background:#f8f9fa;color:#555;font-weight:600;
+              font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+table.data tr:last-child td{border-bottom:none}
+.pill{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;
+      border-radius:20px;letter-spacing:.3px}
+.pill-pass{background:#d5f5e3;color:#1e8449}
+.pill-fail{background:#fdedec;color:#cb4335}
+.pill-warn{background:#fef9e7;color:#b7950b}
+.pill-info{background:#eaf4fb;color:#1a5276}
+.pill-dup {background:#f5eef8;color:#6c3483}
+.checklist{list-style:none;margin:0;padding:0}
+.checklist li{padding:8px 0;border-bottom:1px solid #f0f0f0;
+              font-size:13px;display:flex;align-items:flex-start;gap:10px}
+.checklist li:last-child{border-bottom:none}
+.chk-icon{font-size:16px;min-width:20px;margin-top:1px}
+.diff-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.diff-tbl th{background:#f8f9fa;padding:9px 12px;text-align:left;
+             font-size:11px;text-transform:uppercase;letter-spacing:.5px;
+             color:#555;font-weight:600;border-bottom:2px solid #e0e0e0}
+.diff-tbl td{padding:9px 12px;border-bottom:1px solid #f5f5f5;vertical-align:top}
+.diff-tbl tr:last-child td{border-bottom:none}
+.val-match{color:#1e8449;font-weight:600}
+.val-miss {color:#cb4335;font-weight:600}
+.val-warn {color:#b7950b;font-weight:600}
+.val-neutral{color:#2c3e50}
+.arrow{color:#aaa;margin:0 6px;font-size:11px}
+.mismatch-row{background:#fff8f8}
+.match-row{background:#f9fffa}
+.decision-banner{border-radius:8px;padding:18px 22px;margin-top:24px;
+                 display:flex;align-items:center;gap:14px}
+.decision-icon{font-size:32px;min-width:42px}
+.decision-text h3{margin:0 0 3px;font-size:16px;font-weight:700}
+.decision-text p{margin:0;font-size:13px;opacity:.85}
+.footer{background:#f8f9fa;padding:16px 32px;font-size:11px;
+        color:#95a5a6;border-top:1px solid #ecf0f1;text-align:center}
+.doc-card{border:1px solid #e8e8e8;border-radius:8px;padding:14px 16px;
+          margin-bottom:10px}
+.doc-card-title{font-size:11px;font-weight:700;letter-spacing:.6px;
+                text-transform:uppercase;color:#888;margin:0 0 8px}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.three-col{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
+.kv{display:flex;justify-content:space-between;font-size:13px;
+    padding:3px 0;border-bottom:1px dotted #f0f0f0}
+.kv:last-child{border-bottom:none}
+.kv-label{color:#888;font-weight:500}
+.kv-value{font-weight:600;color:#2c3e50;text-align:right;max-width:60%}
+.scenario-badge{display:inline-flex;align-items:center;gap:8px;
+               border-radius:6px;padding:10px 16px;font-size:13px;
+               font-weight:600;margin-bottom:20px}
+.amount-highlight{font-size:26px;font-weight:700;letter-spacing:-.5px}
+.amount-sub{font-size:12px;opacity:.7;margin-top:2px}
+.delta-positive{color:#cb4335}
+.delta-negative{color:#1e8449}
+.tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;
+     letter-spacing:.4px;text-transform:uppercase;vertical-align:middle;
+     margin-left:4px}
+</style><div class='wrap'><div class='topbar' style='background:#2980b9'></div><div class='hdr' style='background:#2980b9'><h1>✅ AP Invoice Processing Result</h1><p>Approved by Reviewer ✓ &nbsp;·&nbsp; Invoice INV-S08-001 &nbsp;·&nbsp; IT Solutions Pvt Ltd</p></div><div class='body'><div class='summary-box' style='background:#f0fdf4;border-color:#2980b9'>Invoice INV-S08-001 from IT Solutions Pvt Ltd was processed against Purchase Order PO-S08-001. The 3-way matching engine compared all header fields, line items, quantities, prices, tax rates, freight charges and payment terms. Final Decision: Approved by Reviewer.</div><div class='section'><p class='section-title'>📑 Document Reference</p><div class='three-col'><div class='doc-card'><p class='doc-card-title'>📄 Invoice</p><div class='kv'><span class='kv-label'>Number</span><span class='kv-value'><strong>INV-S08-001</strong></span></div><div class='kv'><span class='kv-label'>Date</span><span class='kv-value'><strong>2026-06-23</strong></span></div><div class='kv'><span class='kv-label'>Vendor</span><span class='kv-value'><strong>IT Solutions Pvt Ltd</strong></span></div><div class='kv'><span class='kv-label'>Amount</span><span class='kv-value'><strong>$36,998.00</strong></span></div><div class='kv'><span class='kv-label'>Tax</span><span class='kv-value'><strong>GST @ 18%</strong></span></div><div class='kv'><span class='kv-label'>Terms</span><span class='kv-value'><strong>Net 15</strong></span></div></div><div class='doc-card'><p class='doc-card-title'>📋 Purchase Order</p><div class='kv'><span class='kv-label'>PO Number</span><span class='kv-value'><strong>PO-S08-001</strong></span></div><div class='kv'><span class='kv-label'>PO Date</span><span class='kv-value'><strong>2026-06-12</strong></span></div><div class='kv'><span class='kv-label'>Vendor</span><span class='kv-value'><strong>IT Solutions Pvt Ltd</strong></span></div><div class='kv'><span class='kv-label'>PO Amount</span><span class='kv-value'><strong>$36,998.00</strong></span></div><div class='kv'><span class='kv-label'>Currency</span><span class='kv-value'><strong>USD</strong></span></div></div><div class='doc-card'><p class='doc-card-title'>📦 GRN</p><div class='kv'><span class='kv-label'>GRN Number</span><span class='kv-value'><strong>GRN-S08-001</strong></span></div><div class='kv'><span class='kv-label'>Received By</span><span class='kv-value'><strong>Mohan D</strong></span></div><div class='kv'><span class='kv-label'>Recv Date</span><span class='kv-value'><strong>2026-06-22</strong></span></div><div class='kv'><span class='kv-label'>PO Ref</span><span class='kv-value'><strong>PO-S08-001</strong></span></div></div></div></div><div class='section'><p class='section-title'>💵 Amount Reconciliation</p><div style='display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:8px'><div style='text-align:center;background:#f0fdf4;border-radius:8px;padding:16px'><p style='margin:0 0 4px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px'>PO Amount</p><p class='amount-highlight' style='color:#1e8449;margin:0'>$36,998.00</p></div><div style='text-align:center;background:#fef9f0;border-radius:8px;padding:16px'><p style='margin:0 0 4px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px'>Invoice Amount</p><p class='amount-highlight' style='color:#e67e22;margin:0'>$36,998.00</p></div><div style='text-align:center;background:#f0f9ff;border-radius:8px;padding:16px'><p style='margin:0 0 4px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px'>Variance</p><p class='amount-highlight delta-negative' style='margin:0'>$0.00</p><p style='margin:4px 0 0;font-size:12px'><span class='pill pill-pass'>0.00%  No variance</span></p></div></div><div style='background:#f8f9fa;border-radius:6px;padding:12px 14px;font-size:13px;margin-top:10px'><p style='margin:0 0 8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#888'>Invoice Amount Breakdown</p><div class='kv'><span class='kv-label'>Subtotal</span><span class='kv-value'><strong>$31,100.00</strong></span></div><div class='kv'><span class='kv-label'>Tax</span><span class='kv-value'><strong>$5,598.00</strong></span></div><div class='kv'><span class='kv-label'>Freight</span><span class='kv-value'><strong>$300.00</strong></span></div><div class='kv' style='border-top:1px solid #ddd;margin-top:4px;padding-top:6px'><span class='kv-label' style='font-weight:700'>Invoice Total</span><span class='kv-value'><strong>$36,998.00</strong></span></div></div></div><div class='section'><p class='section-title'>✅ All Validation Checks Passed</p><ul class='checklist'><li><span class='chk-icon'>✅</span><span><strong>PO Validity</strong><br><span style='color:#666;font-size:12px'>Purchase Order is Open / Partially Open and not expired</span></span></li><li><span class='chk-icon'>✅</span><span><strong>GRN Validation</strong><br><span style='color:#666;font-size:12px'>Goods Receipt Note is approved and date precedes invoice</span></span></li><li><span class='chk-icon'>✅</span><span><strong>Invoice Date</strong><br><span style='color:#666;font-size:12px'>Invoice date is not future-dated or older than 90 days</span></span></li><li><span class='chk-icon'>✅</span><span><strong>Vendor / Header</strong><br><span style='color:#666;font-size:12px'>Vendor name, PO reference and currency all match</span></span></li><li><span class='chk-icon'>✅</span><span><strong>Unit Price</strong><br><span style='color:#666;font-size:12px'>Each line unit price within ±2% of PO agreed price</span></span></li><li><span class='chk-icon'>✅</span><span><strong>Unit of Measure</strong><br><span style='color:#666;font-size:12px'>Line UOM matches PO (EA, KG, LTR, BOX …)</span></span></li><li><span class='chk-icon'>✅</span><span><strong>Quantity</strong><br><span style='color:#666;font-size:12px'>Invoice qty = PO ordered qty = GRN accepted qty</span></span></li><li><span class='chk-icon'>✅</span><span><strong>Tax Rate & Amount</strong><br><span style='color:#666;font-size:12px'>GST/VAT/IGST rate and computed tax amount match PO</span></span></li><li><span class='chk-icon'>✅</span><span><strong>Freight & Discount</strong><br><span style='color:#666;font-size:12px'>Freight ≤5% variance, discount matches PO terms</span></span></li><li><span class='chk-icon'>✅</span><span><strong>Payment Terms</strong><br><span style='color:#666;font-size:12px'>Payment terms (Net 30/45/60) match PO</span></span></li><li><span class='chk-icon'>✅</span><span><strong>Line Amounts</strong><br><span style='color:#666;font-size:12px'>Qty × Unit price = line total (arithmetic check)</span></span></li><li><span class='chk-icon'>✅</span><span><strong>Invoice Total</strong><br><span style='color:#666;font-size:12px'>Sum of lines + tax + freight − discount = invoice total</span></span></li></ul></div><div class='section'><p class='section-title'>📦 Line Items (3-Way Match)</p><table class='diff-tbl'><thead><tr><th style='width:28%'>Line Item</th><th>Qty (Invoice)</th><th>Unit Price (Invoice)</th><th>Condition</th><th>GRN Match</th><th>Status</th></tr></thead><tbody><tr class='match-row'><td><strong>Cisco Switch 24-Port</strong></td><td><span class='val-neutral'>3</span></td><td><span class='val-match'>$4,200.00</span></td><td><span class='val-match'>Good</span></td><td><span class='pill pill-pass'>Matched</span></td><td><span class='pill pill-pass'>Matched</span></td></tr><tr class='match-row'><td><strong>HP Server DL380 Gen10</strong></td><td><span class='val-neutral'>1</span></td><td><span class='val-match'>$18,500.00</span></td><td><span class='val-match'>Good</span></td><td><span class='pill pill-pass'>Matched</span></td><td><span class='pill pill-pass'>Matched</span></td></tr></tbody></table></div><div class='section'><p class='section-title'>👤 Reviewer Details</p><table class='data'><tr><td style='width:35%;color:#888'>Reviewer</td><td><strong>Balakrishna M</strong></td></tr><tr><td style='color:#888'>Decision</td><td>Approve</td></tr><tr><td style='color:#888'>Comments</td><td>Payment terms exception approved by Finance Head — vendor confirmed Net 15 per revised agreement.</td></tr><tr><td style='color:#888'>Reviewed At</td><td>2026-06-29 11:45:00</td></tr></table></div><div class='decision-banner' style='background:#f0fdf4;border:2px solid #2980b9'><span class='decision-icon'>✅</span><div class='decision-text'><h3 style='color:#2980b9'>Approved by Reviewer ✓</h3><p>Invoice cleared for payment processing. No manual intervention required.</p></div></div><div class='footer'>AP Automation Agent &nbsp;·&nbsp; 29 Jun 2026 07:05 &nbsp;·&nbsp; Email moved to <strong>Processed</strong> folder</div></div></div></body></html>

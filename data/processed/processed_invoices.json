@@ -1,0 +1,40 @@
+{
+  "processed_invoices": [
+    {
+      "invoice_number": "INV-S05-001",
+      "vendor_name": "Prime Logistics Ltd",
+      "po_number": "PO-S05-001",
+      "amount": "3422.00",
+      "currency": "USD",
+      "processed_date": "2026-06-14",
+      "status": "Perfect Match"
+    },
+    {
+      "invoice_number": "INV-S01-001",
+      "vendor_name": "ABC Industries",
+      "po_number": "PO-S01-001",
+      "amount": "15825.0",
+      "currency": "USD",
+      "processed_date": "2026-06-19",
+      "status": "Perfect Match"
+    },
+    {
+      "invoice_number": "INV-S11-001",
+      "vendor_name": "Delta Office Supplies",
+      "po_number": "PO-S11-001",
+      "amount": "5552.0",
+      "currency": "USD",
+      "processed_date": "2026-06-25",
+      "status": "Approved by Reviewer"
+    },
+    {
+      "invoice_number": "INV-S03-001",
+      "vendor_name": "Global Supplies Co",
+      "po_number": "PO-S03-001",
+      "amount": "8773.2",
+      "currency": "USD",
+      "processed_date": "2026-06-17",
+      "status": "Manual Review Required"
+    }
+  ]
+}
