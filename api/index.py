@@ -177,6 +177,27 @@ td.mono, td.amt { font-family: var(--mono); }
 .back { font-size: 13px; color: var(--muted); text-decoration: none; display: inline-block; margin-bottom: 18px; }
 .back:hover { color: var(--ink); }
 
+/* ── confirm modal (replaces native browser confirm()) ─────────── */
+.modal-overlay {
+  display: none; position: fixed; inset: 0; background: rgba(11,18,32,0.45);
+  z-index: 1000; align-items: center; justify-content: center;
+}
+.modal-overlay.show { display: flex; }
+.modal-box {
+  background: var(--surface); border-radius: 14px; padding: 26px 28px; max-width: 420px; width: 90%;
+  box-shadow: 0 12px 40px rgba(11,18,32,0.25);
+}
+.modal-box h3 { font-size: 16px; margin: 0 0 10px; color: var(--ink); }
+.modal-box p { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 22px; line-height: 1.5; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+.modal-actions button {
+  padding: 9px 18px; font-size: 13.5px; font-weight: 600; border-radius: 8px; cursor: pointer; border: none;
+}
+.modal-actions .cancel { background: var(--slate-bg); color: var(--ink-soft); }
+.modal-actions .cancel:hover { background: #E3E6EB; }
+.modal-actions .confirm { background: var(--crimson); color: white; }
+.modal-actions .confirm:hover { background: #96190F; }
+
 @media (max-width: 720px) {
   .stats { grid-template-columns: repeat(2, 1fr); }
   .nav { display: none; }
@@ -236,6 +257,31 @@ def _shell(title: str, active: str, body: str) -> str:
     <nav class="nav">{nav_html}</nav>
   </div></div>
   <div class="shell">{body}</div>
+
+  <div id="confirmModalOverlay" class="modal-overlay">
+    <div class="modal-box">
+      <h3 id="confirmModalTitle">Are you sure?</h3>
+      <p id="confirmModalMsg"></p>
+      <div class="modal-actions">
+        <button class="cancel" onclick="_closeConfirmModal(false)">Cancel</button>
+        <button class="confirm" onclick="_closeConfirmModal(true)">Confirm</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    let _confirmModalCallback = null;
+    function showConfirmModal(message, onConfirm, title) {{
+      document.getElementById('confirmModalTitle').textContent = title || 'Are you sure?';
+      document.getElementById('confirmModalMsg').textContent = message;
+      document.getElementById('confirmModalOverlay').classList.add('show');
+      _confirmModalCallback = onConfirm;
+    }}
+    function _closeConfirmModal(confirmed) {{
+      document.getElementById('confirmModalOverlay').classList.remove('show');
+      if (confirmed && _confirmModalCallback) _confirmModalCallback();
+      _confirmModalCallback = null;
+    }}
+  </script>
 </body>
 </html>"""
 
@@ -549,15 +595,31 @@ async def dashboard_processed():
   }}
 
   async function clearAllProcessed() {{
-    if (!confirm('This wipes the ENTIRE processed-invoice log. Continue?')) return;
-    try {{
-      const res = await fetch('/api/admin/clear-all-processed', {{
-        method: 'POST', headers: {{ 'X-Trigger-Secret': TRIGGER_SECRET }}
-      }});
-      const data = await res.json();
-      alert(res.ok ? ('Cleared ' + data.cleared + ' invoice(s).') : 'Failed.');
-      location.reload();
-    }} catch (e) {{ alert('Network error: ' + e.message); }}
+    showConfirmModal(
+      'This wipes the ENTIRE processed-invoice log. This cannot be undone.',
+      async () => {{
+        const statusEl = document.getElementById('adminStatus');
+        statusEl.textContent = 'Clearing…'; statusEl.className = 'status';
+        try {{
+          const res = await fetch('/api/admin/clear-all-processed', {{
+            method: 'POST', headers: {{ 'X-Trigger-Secret': TRIGGER_SECRET }}
+          }});
+          const data = await res.json();
+          if (res.ok) {{
+            statusEl.textContent = 'Cleared ' + data.cleared + ' invoice(s) — reloading…';
+            statusEl.className = 'status ok';
+            setTimeout(() => location.reload(), 900);
+          }} else {{
+            statusEl.textContent = 'Failed (HTTP ' + res.status + ').';
+            statusEl.className = 'status err';
+          }}
+        }} catch (e) {{
+          statusEl.textContent = 'Network error: ' + e.message;
+          statusEl.className = 'status err';
+        }}
+      }},
+      'Clear entire processed log?'
+    );
   }}
 </script>
 """
@@ -653,15 +715,31 @@ async def dashboard_exceptions():
   }}
 
   async function clearAllExceptions() {{
-    if (!confirm('This wipes the ENTIRE Exceptions log. Continue?')) return;
-    try {{
-      const res = await fetch('/api/admin/clear-all-exceptions', {{
-        method: 'POST', headers: {{ 'X-Trigger-Secret': TRIGGER_SECRET }}
-      }});
-      const data = await res.json();
-      alert(res.ok ? ('Cleared ' + data.cleared + ' record(s).') : 'Failed.');
-      location.reload();
-    }} catch (e) {{ alert('Network error: ' + e.message); }}
+    showConfirmModal(
+      'This wipes the ENTIRE Exceptions log. This cannot be undone.',
+      async () => {{
+        const statusEl = document.getElementById('excStatus');
+        statusEl.textContent = 'Clearing…'; statusEl.className = 'status';
+        try {{
+          const res = await fetch('/api/admin/clear-all-exceptions', {{
+            method: 'POST', headers: {{ 'X-Trigger-Secret': TRIGGER_SECRET }}
+          }});
+          const data = await res.json();
+          if (res.ok) {{
+            statusEl.textContent = 'Cleared ' + data.cleared + ' record(s) — reloading…';
+            statusEl.className = 'status ok';
+            setTimeout(() => location.reload(), 900);
+          }} else {{
+            statusEl.textContent = 'Failed (HTTP ' + res.status + ').';
+            statusEl.className = 'status err';
+          }}
+        }} catch (e) {{
+          statusEl.textContent = 'Network error: ' + e.message;
+          statusEl.className = 'status err';
+        }}
+      }},
+      'Clear entire Exceptions log?'
+    );
   }}
 </script>
 """
