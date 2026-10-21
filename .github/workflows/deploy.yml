@@ -1,5 +1,5 @@
 # Deploy the AP Engine (SAP-integrated 3-way match) to the EC2 Windows
-# server on every push to main — same pattern as Avagama: a self-hosted
+# server on every push to main - same pattern as Avagama: a self-hosted
 # GitHub Actions runner on the EC2 copies the code into the deployment
 # folder and restarts the app.
 #
@@ -14,7 +14,7 @@ name: Deploy AP Engine
 on:
   push:
     branches: [main]
-  workflow_dispatch:          # "Run workflow" button in GitHub → Actions
+  workflow_dispatch:          # "Run workflow" button in GitHub -> Actions
 
 concurrency:
   group: ap-engine-deploy
@@ -47,7 +47,8 @@ jobs:
           # free for the restart.
           nssm stop $env:SERVICE 2>$null
           foreach ($i in 1..15) {
-            if ((nssm status $env:SERVICE 2>$null) -notmatch "RUNNING|PENDING") { break }
+            $st = (nssm status $env:SERVICE 2>$null | Out-String) -replace "[^A-Z_]", ""
+            if ($st -notmatch "RUNNING|PENDING") { break }
             Start-Sleep -Seconds 1
           }
           # Kill anything still running from the app's venv (e.g. a manual
@@ -58,8 +59,8 @@ jobs:
             ForEach-Object { "Stopping leftover PID $($_.ProcessId)"; Stop-Process -Id $_.ProcessId -Force }
           # Anything else still holding the app port?
           $busy = Get-NetTCPConnection -LocalPort $env:APP_PORT -State Listen -ErrorAction SilentlyContinue
-          if ($busy) { throw "Port $env:APP_PORT is still in use by PID $($busy.OwningProcess) — stop it and re-run" }
-          "App stopped — port $env:APP_PORT free"
+          if ($busy) { throw "Port $env:APP_PORT is still in use by PID $($busy.OwningProcess) - stop it and re-run" }
+          "App stopped - port $env:APP_PORT free"
           exit 0
 
       - name: Copy code to the deployment folder
@@ -83,7 +84,7 @@ jobs:
           } elseif (Test-Path $target) {
             "Using the existing .env on the server"
           } else {
-            throw "No .env on the server and no AP_ENV_FILE secret — see the guide, step 6"
+            throw "No .env on the server and no AP_ENV_FILE secret - see the guide, step 6"
           }
 
       - name: Python environment + dependencies
@@ -96,12 +97,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw "pip install failed" }
           # Proves the SAP NW RFC SDK DLLs load (no SAP call made here)
           .\.venv\Scripts\python.exe -c "import pyrfc; print('pyrfc', pyrfc.__version__, 'SDK OK')"
-          if ($LASTEXITCODE -ne 0) { throw "pyrfc cannot load the SAP NW RFC SDK — check C:\sap\nwrfcsdk and the VC++ runtime" }
+          if ($LASTEXITCODE -ne 0) { throw "pyrfc cannot load the SAP NW RFC SDK - check C:\sap\nwrfcsdk and the VC++ runtime" }
 
-      - name: One-time setup (service, Nginx site, firewall) — skipped when already done
+      - name: One-time setup (service, Nginx site, firewall) - skipped when already done
         shell: powershell
         run: |
-          # ── Windows service "ap-engine" (uvicorn on 127.0.0.1:8200, run by NSSM)
+          # -- Windows service "ap-engine" (uvicorn on 127.0.0.1:8200, run by NSSM)
           New-Item -ItemType Directory -Force -Path $env:LOG_DIR | Out-Null
           nssm status $env:SERVICE 2>$null | Out-Null
           if ($LASTEXITCODE -ne 0) {
@@ -118,12 +119,12 @@ jobs:
             nssm set $env:SERVICE DisplayName "AP Engine (SAP 3-way match)"
           } else { "Service $env:SERVICE already exists" }
 
-          # ── Nginx site on port 2000 (own file in conf.d — nginx.conf is not touched)
+          # -- Nginx site on port 2000 (own file in conf.d - nginx.conf is not touched)
           $site = Join-Path $env:NGINX_DIR "conf\conf.d\ap-engine.conf"
           $src  = Join-Path $env:APP_DIR "deploy\ec2\ap-engine.conf"
           $conf = Get-Content (Join-Path $env:NGINX_DIR "conf\nginx.conf") -Raw
           if ($conf -notmatch "include\s+conf\.d/\*\.conf") {
-            throw "nginx.conf has no 'include conf.d/*.conf;' line — add it once by hand (guide step 9)"
+            throw "nginx.conf has no 'include conf.d/*.conf;' line - add it once by hand (guide step 9)"
           }
           $changed = -not (Test-Path $site) -or ((Get-FileHash $src).Hash -ne (Get-FileHash $site).Hash)
           if ($changed) {
@@ -131,16 +132,16 @@ jobs:
             Copy-Item $src $site -Force
             Push-Location $env:NGINX_DIR
             .\nginx.exe -t
-            if ($LASTEXITCODE -ne 0) { Pop-Location; Remove-Item $site; throw "nginx -t failed — site file removed, other apps unaffected" }
+            if ($LASTEXITCODE -ne 0) { Pop-Location; Remove-Item $site; throw "nginx -t failed - site file removed, other apps unaffected" }
             # Nginx runs as an NSSM service; if the reload signal is refused
             # ("OpenEvent ... Access is denied"), restart the service instead.
             .\nginx.exe -s reload 2>$null
-            if ($LASTEXITCODE -ne 0) { "reload refused — restarting the nginx service"; nssm restart nginx }
+            if ($LASTEXITCODE -ne 0) { "reload refused - restarting the nginx service"; nssm restart nginx }
             Pop-Location
             "Nginx site ap-engine.conf installed and reloaded"
           } else { "Nginx site unchanged" }
 
-          # ── Windows Firewall: allow the public port (AWS security group is separate)
+          # -- Windows Firewall: allow the public port (AWS security group is separate)
           if (-not (Get-NetFirewallRule -DisplayName "AP Engine 2000" -ErrorAction SilentlyContinue)) {
             New-NetFirewallRule -DisplayName "AP Engine 2000" -Direction Inbound -Protocol TCP -LocalPort $env:PUBLIC_PORT -Action Allow | Out-Null
             "Firewall rule created for port $env:PUBLIC_PORT"
@@ -150,9 +151,16 @@ jobs:
         if: always()
         shell: powershell
         run: |
-          nssm start $env:SERVICE
+          # Runs even after a failed step so an existing app comes back up.
+          nssm status $env:SERVICE 2>$null | Out-Null
+          if ($LASTEXITCODE -ne 0) {
+            throw "Service $env:SERVICE does not exist yet - it is created by the 'One-time setup' step; fix the first failed step above and re-run"
+          }
+          nssm start $env:SERVICE 2>$null | Out-Null
           Start-Sleep -Seconds 8
-          nssm status $env:SERVICE
+          $st = (nssm status $env:SERVICE 2>$null | Out-String) -replace "[^A-Z_]", ""
+          "Service status: $st"
+          if ($st -ne "SERVICE_RUNNING") { throw "Service $env:SERVICE is $st - see E:\APEngine\logs\ap-engine.err.log" }
 
       - name: Health check (app + live SAP)
         shell: powershell
@@ -165,5 +173,5 @@ jobs:
               $ok = $true; break
             } catch { "waiting for the app... ($i)"; Start-Sleep -Seconds 5 }
           }
-          if (-not $ok) { throw "App did not answer on port $env:APP_PORT — see E:\APEngine\logs\ap-engine.err.log" }
+          if (-not $ok) { throw "App did not answer on port $env:APP_PORT - see E:\APEngine\logs\ap-engine.err.log" }
           if (-not $h.ok) { Write-Warning "App is up but SAP is not reachable: $($h.error)" }
