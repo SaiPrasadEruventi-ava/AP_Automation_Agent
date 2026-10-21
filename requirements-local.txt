@@ -11,3 +11,11 @@ uvicorn>=0.27.0
 # to seed Redis before your first deploy.
 pandas>=2.0.0
 openpyxl>=3.1.0
+
+# ── Live SAP (Windows RPA server) ─────────────────────────────────
+# Needs the SAP NW RFC SDK 7.50 on the host (lib\ on PATH,
+# SAPNWRFC_HOME set) — see SAP_INTEGRATION.md. Pinned: every pyrfc
+# release is "yanked" on PyPI (unmaintained) but this pin installs.
+pyrfc==3.3.1
+# sap_demo_setup.py renders the demo invoice PDFs
+reportlab>=4.0

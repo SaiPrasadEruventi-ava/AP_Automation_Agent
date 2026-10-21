@@ -1,0 +1,27 @@
+{
+  "scenario": "S12",
+  "expected": "Manual Review",
+  "invoice_data": {
+    "invoice_number": "INV-S12-2228",
+    "vendor_name": "WaveCrest Labs",
+    "invoice_date": "2026-10-14",
+    "po_number": "4500002228",
+    "currency": "USD",
+    "payment_terms": "Net 30",
+    "tax_type": "CA Sales Tax @ 6.00%",
+    "subtotal": 1125.0,
+    "tax": 67.5,
+    "freight": 0.0,
+    "discount": 0.0,
+    "total_amount": 1192.5,
+    "items": [
+      {
+        "item": "Ergonomic Keyboard K400",
+        "quantity": 25,
+        "uom": "EA",
+        "unit_price": 45.0,
+        "amount": 1125.0
+      }
+    ]
+  }
+}

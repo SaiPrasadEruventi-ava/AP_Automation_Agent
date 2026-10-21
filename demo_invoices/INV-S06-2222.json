@@ -1,0 +1,34 @@
+{
+  "scenario": "S06",
+  "expected": "Manual Review",
+  "invoice_data": {
+    "invoice_number": "INV-S06-2222",
+    "vendor_name": "EV Parts Inc.",
+    "invoice_date": "2026-10-14",
+    "po_number": "4500002222",
+    "currency": "USD",
+    "payment_terms": "Net 45",
+    "tax_type": "CA Sales Tax @ 8.25%",
+    "subtotal": 46000.0,
+    "tax": 3795.0,
+    "freight": 500.0,
+    "discount": 0.0,
+    "total_amount": 50295.0,
+    "items": [
+      {
+        "item": "Lab Equipment Set",
+        "quantity": 5,
+        "uom": "EA",
+        "unit_price": 8000.0,
+        "amount": 40000.0
+      },
+      {
+        "item": "Chemical Reagent Kit",
+        "quantity": 50,
+        "uom": "PACK",
+        "unit_price": 120.0,
+        "amount": 6000.0
+      }
+    ]
+  }
+}

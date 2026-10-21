@@ -4,7 +4,7 @@ gmail_token.json
 gmail_oauth_client.json
 *.pem
 *.key
-
+.env.example
 # Python
 __pycache__/
 *.pyc
@@ -17,3 +17,14 @@ venv/
 
 # OS
 .DS_Store
+
+# SAP NW RFC SDK — licensed, install on the host, never commit
+Docs/*.zip
+nwrfcsdk/
+# SAP RFC trace files
+dev_rfc*
+*.trc
+
+# Local mail fallbacks written when no mail provider is configured
+data/notifications/result_*.html
+data/notifications/review_request_*.html

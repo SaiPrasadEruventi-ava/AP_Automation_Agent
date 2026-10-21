@@ -1,0 +1,34 @@
+{
+  "scenario": "S07",
+  "expected": "Manual Review",
+  "invoice_data": {
+    "invoice_number": "INV-S07-2223",
+    "vendor_name": "WaveCrest Labs",
+    "invoice_date": "2026-10-14",
+    "po_number": "4500002223",
+    "currency": "USD",
+    "payment_terms": "Net 30",
+    "tax_type": "CA Sales Tax @ 6.00%",
+    "subtotal": 2500.0,
+    "tax": 150.0,
+    "freight": 85.0,
+    "discount": 0.0,
+    "total_amount": 2735.0,
+    "items": [
+      {
+        "item": "Industrial Solvent IPA",
+        "quantity": 500,
+        "uom": "L",
+        "unit_price": 3.2,
+        "amount": 1600.0
+      },
+      {
+        "item": "Acetone Pure Grade",
+        "quantity": 200,
+        "uom": "KG",
+        "unit_price": 4.5,
+        "amount": 900.0
+      }
+    ]
+  }
+}

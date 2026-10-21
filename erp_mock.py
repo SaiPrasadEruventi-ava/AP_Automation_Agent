@@ -14,9 +14,26 @@ Public functions (lookup_po, lookup_grn, lookup_po_and_grn,
 list_available_pos) keep the EXACT same signatures/return shapes as
 before, so matcher.py, node_*.py, summary_sender.py etc. need ZERO
 changes.
+
+Live SAP
+---------
+With AP_ERP_SOURCE=sap (.env) every lookup is routed to erp_sap.py and
+read live from SAP over RFC on each call — no Redis copy, no cache. The
+Redis mock below remains for AP_ERP_SOURCE=mock (local testing without
+SAP access, and the original test_*.py scripts).
 """
 
+import os
+
 import redis_store
+
+
+def erp_source() -> str:
+    return os.getenv("AP_ERP_SOURCE", "mock").strip().lower()
+
+
+def using_sap() -> bool:
+    return erp_source() == "sap"
 
 
 def _norm_po(po_number: str) -> str:
@@ -35,6 +52,8 @@ def lookup_po(po_number: str) -> dict:
         }
     Returns {} if not found.
     """
+    if using_sap():
+        return lookup_po_and_grn(po_number)[0]
     print(f"  🔎 ERP lookup: PO {po_number}")
     key = _norm_po(po_number)
     po_data = redis_store.erp_get_po(key)
@@ -64,6 +83,8 @@ def lookup_grn(po_number: str) -> dict:
         }
     Returns {} if no GRN has been recorded yet for that PO.
     """
+    if using_sap():
+        return lookup_po_and_grn(po_number)[1]
     print(f"  🔎 ERP lookup: GRN for PO {po_number}")
     key = _norm_po(po_number)
     grn_data = redis_store.erp_get_grn(key)
@@ -80,7 +101,20 @@ def lookup_grn(po_number: str) -> dict:
 
 
 def lookup_po_and_grn(po_number: str) -> tuple:
-    """Convenience wrapper — returns (po_data, grn_data) in one call."""
+    """Convenience wrapper — returns (po_data, grn_data) in one call.
+    In SAP mode both come from one live RFC session."""
+    if using_sap():
+        import erp_sap
+        print(f"  🔎 SAP lookup ({erp_sap.source_label()}): PO {po_number}")
+        po_data, grn_data = erp_sap.lookup_po_and_grn(po_number)
+        if not po_data:
+            print(f"    ⚠️  PO '{po_number}' not found in SAP")
+        else:
+            print(f"    ✅ PO {po_data['po_number']} | {po_data['vendor_name']} | "
+                  f"{po_data['currency']} {po_data['po_amount']:,.2f} | "
+                  f"status {po_data['po_status']} | {len(po_data['items'])} line(s)")
+            print(f"    {'✅ GR ' + grn_data['grn_number'] + ' | received ' + grn_data['received_date'] if grn_data else '⚠️  No goods receipt posted in SAP yet'}")
+        return po_data, grn_data
     po_data  = lookup_po(po_number)
     grn_data = lookup_grn(po_number) if po_data else {}
     return po_data, grn_data
@@ -88,4 +122,7 @@ def lookup_po_and_grn(po_number: str) -> tuple:
 
 def list_available_pos() -> list:
     """Return all PO numbers currently in the mock ERP — useful for diagnostics."""
+    if using_sap():
+        import erp_sap
+        return erp_sap.recent_po_numbers()
     return redis_store.erp_list_po_numbers()

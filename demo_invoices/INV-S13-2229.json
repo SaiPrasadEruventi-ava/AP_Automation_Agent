@@ -1,0 +1,27 @@
+{
+  "scenario": "S13",
+  "expected": "Incomplete \u2014 Missing Documents",
+  "invoice_data": {
+    "invoice_number": "INV-S13-2229",
+    "vendor_name": "BeSafe Inc",
+    "invoice_date": "2026-10-14",
+    "po_number": "4500002229",
+    "currency": "USD",
+    "payment_terms": "Net 30",
+    "tax_type": "CA Sales Tax @ 6.00%",
+    "subtotal": 2600.0,
+    "tax": 156.0,
+    "freight": 40.0,
+    "discount": 0.0,
+    "total_amount": 2796.0,
+    "items": [
+      {
+        "item": "Projector Epson EB-X51",
+        "quantity": 4,
+        "uom": "EA",
+        "unit_price": 650.0,
+        "amount": 2600.0
+      }
+    ]
+  }
+}

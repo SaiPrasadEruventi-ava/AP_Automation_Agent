@@ -40,7 +40,8 @@ def generate_token() -> str:
 def create_pending_review(invoice_data: dict, po_data: dict, grn_data: dict,
                            matching: dict, decision_info: dict,
                            supporting_docs: list = None,
-                           email_entry_id: str = None) -> str:
+                           email_entry_id: str = None,
+                           dup_check: dict = None) -> str:
     """
     Persist a pending review and return its token.
 
@@ -62,6 +63,7 @@ def create_pending_review(invoice_data: dict, po_data: dict, grn_data: dict,
         "decision_info":   decision_info,
         "supporting_docs": supporting_docs or [],
         "email_entry_id":  email_entry_id,
+        "dup_check":       dup_check or {"is_duplicate": False},
     }
 
     redis_store.pending_save(token, record)

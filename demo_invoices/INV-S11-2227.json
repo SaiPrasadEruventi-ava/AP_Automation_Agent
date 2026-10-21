@@ -1,0 +1,41 @@
+{
+  "scenario": "S11",
+  "expected": "Manual Review",
+  "invoice_data": {
+    "invoice_number": "INV-S11-2227",
+    "vendor_name": "Delta Office Supplies",
+    "invoice_date": "2026-10-14",
+    "po_number": "4500002227",
+    "currency": "USD",
+    "payment_terms": "Net 30",
+    "tax_type": "CA Sales Tax @ 6.00%",
+    "subtotal": 4850.0,
+    "tax": 291.0,
+    "freight": 120.0,
+    "discount": 0.0,
+    "total_amount": 5261.0,
+    "items": [
+      {
+        "item": "A4 Copy Paper Box of 5 Reams",
+        "quantity": 100,
+        "uom": "CASE",
+        "unit_price": 28.5,
+        "amount": 2850.0
+      },
+      {
+        "item": "Whiteboard Marker Set 12 Pack",
+        "quantity": 50,
+        "uom": "PACK",
+        "unit_price": 8.0,
+        "amount": 400.0
+      },
+      {
+        "item": "Filing Cabinet 4-Drawer",
+        "quantity": 5,
+        "uom": "EA",
+        "unit_price": 320.0,
+        "amount": 1600.0
+      }
+    ]
+  }
+}

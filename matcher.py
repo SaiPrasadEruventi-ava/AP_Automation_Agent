@@ -7,8 +7,62 @@ Returns detailed match results with variances.
 """
 
 
+import re
+from datetime import date, datetime
+
+
 def _norm(text: str) -> str:
     return " ".join(str(text).lower().split())
+
+
+def _norm_party(text: str) -> str:
+    """Vendor names compared without punctuation/quotes/case, so SAP's
+    'EV Parts Inc.' matches an invoice printed 'EV PARTS INC'."""
+    return " ".join(re.sub(r"[^a-z0-9 ]", " ", str(text or "").lower()).split())
+
+
+def _num(v) -> float:
+    try:
+        return float(str(v).replace(",", "").replace("$", "")) if v not in (None, "") else 0.0
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _qty(v):
+    """Quantities as numbers that print cleanly: 10.0 -> 10, 2.5 -> 2.5."""
+    f = _num(v)
+    return int(f) if f == int(f) else round(f, 3)
+
+
+# SAP commercial units vs the many ways vendors print the same unit.
+_UOM_SYNONYMS = {
+    "EA": "EA", "EACH": "EA", "PC": "EA", "PCS": "EA", "PIECE": "EA", "PIECES": "EA",
+    "NOS": "EA", "NO": "EA", "UNIT": "EA", "UNITS": "EA", "ST": "EA",
+    "KG": "KG", "KGS": "KG", "KILOGRAM": "KG", "KILOGRAMS": "KG",
+    "L": "L", "LT": "L", "LTR": "L", "LTRS": "L", "LITRE": "L", "LITER": "L", "LITRES": "L",
+    "PAC": "PAC", "PAK": "PAC", "PACK": "PAC", "PKT": "PAC",
+    "ROL": "ROL", "ROLL": "ROL", "ROLLS": "ROL",
+    "CS": "CS", "CV": "CS", "CASE": "CS", "CASES": "CS",
+    "H": "H", "HR": "H", "HRS": "H", "HOUR": "H", "HOURS": "H",
+    "M": "M", "MTR": "M", "METER": "M", "METRE": "M",
+}
+
+
+def _norm_uom(u) -> str:
+    k = str(u or "").strip().upper().rstrip(".")
+    return _UOM_SYNONYMS.get(k, k)
+
+
+def _rate_from_label(label):
+    m = re.search(r"(\d+(?:\.\d+)?)\s*%", str(label or ""))
+    return float(m.group(1)) if m else None
+
+
+def _parse_date(s):
+    try:
+        return datetime.strptime(str(s).strip()[:10], "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return None
 
 
 def _build_index(items: list, key: str = "item") -> dict:
@@ -52,8 +106,8 @@ def run_three_way_match(invoice_data: dict,
     item_results = []
 
     # ── Header matching ───────────────────────────────────────────────
-    inv_vendor = _norm(invoice_data.get("vendor_name", ""))
-    po_vendor  = _norm(po_data.get("vendor_name",      ""))
+    inv_vendor = _norm_party(invoice_data.get("vendor_name", ""))
+    po_vendor  = _norm_party(po_data.get("vendor_name",      ""))
     inv_po_num = invoice_data.get("po_number", "").strip().upper()
     po_num     = po_data.get("po_number",      "").strip().upper()
     inv_cur    = invoice_data.get("currency",  "USD").upper()
@@ -94,18 +148,22 @@ def run_three_way_match(invoice_data: dict,
 
     for inv_item in inv_items:
         name      = inv_item.get("item", "")
-        inv_qty   = int(inv_item.get("quantity",   0))
-        inv_price = float(inv_item.get("unit_price", 0))
+        inv_qty   = _qty(inv_item.get("quantity",   0))
+        inv_price = _num(inv_item.get("unit_price", 0))
         key       = _norm(name)
 
         po_item  = po_idx.get(key,  {})
         grn_item = grn_idx.get(key, {})
 
-        po_qty    = int(po_item.get("quantity",          0)) if po_item  else None
-        po_price  = float(po_item.get("unit_price",      0)) if po_item  else None
-        grn_recv  = int(grn_item.get("quantity_received",0)) if grn_item else None
-        grn_acc   = int(grn_item.get("quantity_accepted",0)) if grn_item else None
+        po_qty    = _qty(po_item.get("quantity",          0)) if po_item  else None
+        po_price  = _num(po_item.get("unit_price",        0)) if po_item  else None
+        grn_recv  = _qty(grn_item.get("quantity_received",0)) if grn_item else None
+        grn_acc   = _qty(grn_item.get("quantity_accepted",0)) if grn_item else None
         condition = grn_item.get("condition","Good")          if grn_item else "Not received"
+        # Live SAP: quantity already invoiced against this PO line (EKBE
+        # invoice receipts, net of reversals) is no longer billable.
+        already_invoiced = _qty(po_item.get("quantity_invoiced", 0)) if po_item else 0
+        billable = _qty(grn_acc - already_invoiced) if grn_acc is not None else None
 
         # Compare
         # Price tolerance: within variance_threshold% of PO price counts
@@ -119,7 +177,7 @@ def run_three_way_match(invoice_data: dict,
             price_ok = abs(inv_price - (po_price or 0)) < 0.01
 
         inv_vs_po  = "Match" if po_qty  is not None and inv_qty == po_qty  and price_ok else "Mismatch"
-        inv_vs_grn = "Match" if grn_acc is not None and inv_qty == grn_acc else "Mismatch"
+        inv_vs_grn = "Match" if billable is not None and inv_qty == billable else "Mismatch"
         po_vs_grn  = "Match" if grn_recv is not None and po_qty is not None and po_qty == grn_recv else "Mismatch"
 
         all_match = inv_vs_po == "Match" and inv_vs_grn == "Match" and po_vs_grn == "Match"
@@ -142,6 +200,8 @@ def run_three_way_match(invoice_data: dict,
             "po_qty":        po_qty,
             "grn_received":  grn_recv,
             "grn_accepted":  grn_acc,
+            "already_invoiced": already_invoiced,
+            "po_item":       po_item.get("po_item", "") if po_item else "",
             "invoice_price": inv_price,
             "po_price":      po_price,
             "condition":     condition,
@@ -221,6 +281,15 @@ def apply_business_rules(matching: dict,
             "reasons":         reasons,
         }
 
+    grn_data = (state or {}).get("grn_data", {})
+
+    # ── Document-level gates (live ERP status, dates, arithmetic) ────────
+    _check_po_validity(reasons, po_data)
+    _check_grn_validity(reasons, grn_data, invoice_data)
+    _check_invoice_date(reasons, invoice_data, po_data)
+    _check_line_amounts(reasons, invoice_data)
+    _check_invoice_total(reasons, invoice_data)
+
     # ── Header mismatch — derive specific header field that failed ────
     if not hm:
         mismatch_text = " ".join(mismatches).lower()
@@ -255,6 +324,9 @@ def apply_business_rules(matching: dict,
 
     # ── Freight overcharge — independent of line/header match ───────────
     _check_freight_overcharge(reasons, invoice_data, po_data, variance_threshold)
+
+    # ── Discount vs PO pricing conditions — independent check ───────────
+    _check_discount_mismatch(reasons, invoice_data, po_data)
 
     # ── Amount variance — decomposed by actual cause, not a blanket label ──
     # The old version labelled ANY total-vs-PO variance as "Price Variance
@@ -321,7 +393,7 @@ def _check_uom_mismatch(reasons: list, invoice_data: dict, po_data: dict) -> Non
             continue
         inv_uom = str(inv_item.get("uom", inv_item.get("unit", ""))).upper().strip()
         po_uom  = str(po_item.get("uom", po_item.get("unit", ""))).upper().strip()
-        if inv_uom and po_uom and inv_uom != po_uom:
+        if inv_uom and po_uom and _norm_uom(inv_uom) != _norm_uom(po_uom):
             uom_issues.append(f"'{name}': Invoice UOM '{inv_uom}' vs PO UOM '{po_uom}'")
 
     if uom_issues:
@@ -350,6 +422,26 @@ def _check_tax_mismatch(reasons: list, invoice_data: dict, po_data: dict) -> Non
     """
     inv_tax = str(invoice_data.get("tax_type", "")).strip()
     po_tax  = str(po_data.get("tax_type", "")).strip()
+
+    # Live SAP POs carry the expected RATE (tax code + jurisdiction ->
+    # condition records), so compare rates — the label an invoice prints
+    # ("Sales Tax 6%") never matches SAP's own wording.
+    if "tax_rate" in po_data:
+        po_rate = po_data.get("tax_rate")
+        if po_rate is None:
+            return  # mixed rates across lines — no single rate to compare
+        inv_rate = _rate_from_label(inv_tax)
+        if inv_rate is None:
+            base = _num(invoice_data.get("subtotal")) - _num(invoice_data.get("discount"))
+            if base <= 0:
+                return
+            inv_rate = _num(invoice_data.get("tax")) / base * 100
+        if abs(inv_rate - float(po_rate)) > 0.05:
+            reasons.append(
+                f"Tax Mismatch — Wrong Tax Rate: Invoice {inv_tax or 'tax'} "
+                f"({inv_rate:.2f}%) vs PO expects {po_tax}"
+            )
+        return
 
     if not inv_tax or not po_tax:
         return  # nothing to compare
@@ -507,7 +599,9 @@ def _check_amount_variance_decomposed(reasons: list, invoice_data: dict,
     if inv_discount is not None:
         inv_discount_f = float(inv_discount or 0)
         discount_delta = po_discount - inv_discount_f  # positive = invoice under-discounted
-        if abs(discount_delta) > 0.01:
+        if abs(discount_delta) > 0.01 and already_has("Price Variance — Discount"):
+            accounted_for.append("discount")
+        elif abs(discount_delta) > 0.01:
             reasons.append(
                 f"Price Variance — Discount: Invoice applied ${inv_discount_f:,.2f} "
                 f"discount vs PO terms of ${po_discount:,.2f} "
@@ -578,8 +672,15 @@ def _classify_line_mismatches(reasons: list, item_results: list,
                 )
 
         # Quantity / GRN short delivery
+        already = item.get("already_invoiced") or 0
+        if inv_vs_grn == "Mismatch" and inv_qty is not None and grn_acc is not None and already:
+            qty_mismatches.append(
+                f"'{name}': Invoiced {inv_qty} but only {_qty(grn_acc - already)} still "
+                f"billable — GRN accepted {grn_acc}, {already} already invoiced in ERP"
+            )
+            continue
         if inv_vs_grn == "Mismatch" and inv_qty is not None and grn_acc is not None:
-            short = inv_qty - grn_acc
+            short = _qty(inv_qty - grn_acc)
             # Check if damaged / QC rejection is noted in GRN
             condition_lower = condition.lower()
             if any(k in condition_lower for k in
@@ -664,3 +765,119 @@ def _classify_line_mismatches(reasons: list, item_results: list,
                     reasons.append(f"Quantity Discrepancy — {m}")
             else:
                 reasons.append(f"Line Mismatch — {m}")
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Document-level validations (PO status, GRN, dates, arithmetic)
+# ─────────────────────────────────────────────────────────────────────
+
+def _check_po_validity(reasons: list, po_data: dict) -> None:
+    """PO must be in an invoiceable status in the ERP (SAP: not deleted,
+    release complete, not closed) — reconciliation_config's
+    ALLOWED_PO_STATUSES."""
+    from reconciliation_config import CFG
+    status = str(po_data.get("po_status", "") or "")
+    if not status:
+        return
+    if status not in CFG.ALLOWED_PO_STATUSES:
+        detail = po_data.get("po_status_detail") or ""
+        reasons.append(
+            f"PO Validity — PO {po_data.get('po_number')} status is '{status}'"
+            + (f" ({detail})" if detail else "")
+            + f"; only {' / '.join(CFG.ALLOWED_PO_STATUSES)} POs can be invoiced"
+        )
+        return
+    deleted = [i.get("item") for i in po_data.get("items", []) if i.get("deleted")]
+    if deleted:
+        reasons.append("PO Validity — PO line(s) marked for deletion in ERP: "
+                       + ", ".join(f"'{d}'" for d in deleted))
+
+
+def _check_grn_validity(reasons: list, grn_data: dict, invoice_data: dict) -> None:
+    """Goods must be received before they are billed."""
+    if not grn_data:
+        return  # handled upstream as "Incomplete — GRN not found"
+    grn_d = _parse_date(grn_data.get("first_received_date") or grn_data.get("received_date"))
+    inv_d = _parse_date(invoice_data.get("invoice_date"))
+    if grn_d and inv_d and grn_d > inv_d:
+        reasons.append(
+            f"GRN Validation — GRN date {grn_d} is after invoice date {inv_d} "
+            f"(goods receipt {grn_data.get('grn_number')} posted after the invoice was issued)"
+        )
+
+
+def _check_invoice_date(reasons: list, invoice_data: dict, po_data: dict) -> None:
+    from reconciliation_config import CFG
+    inv_d = _parse_date(invoice_data.get("invoice_date"))
+    if not inv_d:
+        reasons.append("Invoice Date — invoice date missing or unreadable")
+        return
+    today = date.today()
+    if inv_d > today and not CFG.ALLOW_FUTURE_INVOICE:
+        reasons.append(f"Invoice Date — Future-dated invoice: {inv_d} is after today ({today})")
+    age = (today - inv_d).days
+    if age > CFG.MAX_INVOICE_AGE_DAYS:
+        reasons.append(f"Invoice Date — Invoice is {age} days old, "
+                       f"older than {CFG.MAX_INVOICE_AGE_DAYS} days")
+    po_d = _parse_date(po_data.get("po_date"))
+    if po_d and inv_d < po_d:
+        reasons.append(f"Invoice Date — Invoice dated {inv_d}, before the PO was raised ({po_d})")
+
+
+def _check_line_amounts(reasons: list, invoice_data: dict) -> None:
+    """qty × unit price must equal each printed line amount."""
+    for it in invoice_data.get("items", []):
+        amount = it.get("amount")
+        if amount in (None, "", 0):
+            continue
+        expected = round(_num(it.get("quantity")) * _num(it.get("unit_price")), 2)
+        if abs(expected - _num(amount)) > 0.01:
+            reasons.append(
+                f"Line Amount Mismatch — '{it.get('item')}': {_qty(it.get('quantity'))} × "
+                f"${_num(it.get('unit_price')):,.2f} = ${expected:,.2f} but invoice line shows "
+                f"${_num(amount):,.2f}"
+            )
+
+
+def _check_invoice_total(reasons: list, invoice_data: dict) -> None:
+    """Printed subtotal = sum of lines, and subtotal − discount + tax +
+    freight = printed total."""
+    items = invoice_data.get("items", [])
+    total = _num(invoice_data.get("total_amount"))
+    if not total:
+        return
+    lines_sum = round(sum(_num(i.get("amount")) if i.get("amount") not in (None, "", 0)
+                          else _num(i.get("quantity")) * _num(i.get("unit_price"))
+                          for i in items), 2)
+    subtotal = _num(invoice_data.get("subtotal")) or lines_sum
+    if invoice_data.get("subtotal") and abs(subtotal - lines_sum) > 0.01:
+        reasons.append(
+            f"Invoice Total Mismatch — Subtotal ${subtotal:,.2f} does not equal the sum of "
+            f"line amounts ${lines_sum:,.2f}"
+        )
+    computed = round(subtotal - _num(invoice_data.get("discount")) + _num(invoice_data.get("tax"))
+                     + _num(invoice_data.get("freight")), 2)
+    if abs(computed - total) > 0.01:
+        reasons.append(
+            f"Invoice Total Mismatch — Invoice states ${total:,.2f} but subtotal − discount "
+            f"+ tax + freight = ${computed:,.2f} (arithmetic error of ${abs(total - computed):,.2f})"
+        )
+
+
+def _check_discount_mismatch(reasons: list, invoice_data: dict, po_data: dict) -> None:
+    """Invoice discount vs the discount agreed in the PO's pricing
+    conditions (SAP DRV1/DRG1/RB00...)."""
+    from reconciliation_config import CFG
+    if "discount" not in po_data or invoice_data.get("discount") is None:
+        return
+    inv_d = _num(invoice_data.get("discount"))
+    po_d = _num(po_data.get("discount"))
+    if not inv_d and not po_d:
+        return
+    tol = max(0.01, po_d * CFG.DISCOUNT_TOLERANCE_PCT / 100)
+    if abs(inv_d - po_d) > tol:
+        reasons.append(
+            f"Price Variance — Discount: Invoice applied ${inv_d:,.2f} discount vs PO terms of "
+            f"${po_d:,.2f} (${abs(po_d - inv_d):,.2f} {'less' if inv_d < po_d else 'more'} "
+            f"discount applied than expected)"
+        )

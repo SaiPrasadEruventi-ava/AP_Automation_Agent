@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SAP Demo Verification Guide</title>
+<style>
+:root { --bg:#f5f6f8; --surface:#fff; --ink:#0b1220; --soft:#4b5568; --muted:#7c8597; --border:#e1e5eb;
+  --accent:#0e6e64; --accent-bg:#e5f3f1; --warn:#b45309; --warn-bg:#fef3e2; --err:#b42318; --err-bg:#fdecec;
+  --code:#eef0f3; --mono:ui-monospace,"Cascadia Code",Consolas,monospace; --sans:-apple-system,"Segoe UI",Roboto,Arial,sans-serif; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#0f141c; --surface:#161d27; --ink:#e7ebf1; --soft:#b6bfcc;
+  --muted:#8792a3; --border:#283241; --accent:#3fb6a6; --accent-bg:#14302d; --warn:#f0a44b; --warn-bg:#33270f;
+  --err:#f07167; --err-bg:#3a1b1a; --code:#1f2834; } }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:14.5px/1.55 var(--sans); }
+.layout { display:grid; grid-template-columns:290px 1fr; min-height:100vh; }
+nav { position:sticky; top:0; height:100vh; overflow:auto; background:var(--surface); border-right:1px solid var(--border); padding:18px 12px; }
+nav .brand { font-weight:700; font-size:15px; padding:0 8px 4px; }
+nav .sub { color:var(--muted); font-size:12px; padding:0 8px 14px; }
+nav a { display:flex; gap:8px; align-items:center; padding:7px 8px; border-radius:7px; color:var(--soft); text-decoration:none; font-size:13px; }
+nav a:hover { background:var(--code); color:var(--ink); }
+nav a .pill { margin-left:auto; }
+main { padding:28px 36px 80px; max-width:1100px; }
+h1 { font-size:26px; margin:0 0 6px; } h2 { font-size:20px; margin:0; } h3 { font-size:17px; margin:26px 0 10px; }
+h4 { font-size:14px; margin:22px 0 8px; color:var(--soft); text-transform:uppercase; letter-spacing:.04em; }
+.lead { color:var(--soft); max-width:780px; }
+.card, .case { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px 22px; margin:18px 0; }
+.case { scroll-margin-top:16px; }
+.case-head { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.sid { font-family:var(--mono); font-size:11px; font-weight:700; background:var(--ink); color:var(--surface); border-radius:5px; padding:2px 6px; }
+.sid.big { font-size:14px; padding:4px 9px; }
+.pill { font-size:11px; font-weight:600; border-radius:999px; padding:2px 9px; white-space:nowrap; }
+.pill.ok { background:var(--accent-bg); color:var(--accent); } .pill.warn { background:var(--warn-bg); color:var(--warn); }
+.pill.err { background:var(--err-bg); color:var(--err); }
+.facts { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:10px 18px; padding:12px 14px; background:var(--code); border-radius:9px; }
+.facts .k { display:block; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+.facts .v { font-family:var(--mono); font-size:13px; font-weight:600; }
+table { width:100%; border-collapse:collapse; }
+table.steps th, table.steps td, table.mini th, table.mini td, table.ref th, table.ref td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; font-size:13.5px; }
+table th { font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); font-weight:600; }
+table.steps td.n { width:28px; color:var(--muted); font-family:var(--mono); }
+.tc { font-family:var(--mono); font-weight:700; background:var(--accent-bg); color:var(--accent); border-radius:5px; padding:1px 7px; white-space:nowrap; }
+code { font-family:var(--mono); font-size:12.5px; background:var(--code); padding:1px 5px; border-radius:4px; }
+.click { background:var(--code); border-left:3px solid var(--accent); padding:10px 14px; border-radius:0 8px 8px 0; margin:6px 0; }
+.click .alt { color:var(--muted); font-size:13px; }
+.expect { border-left:3px solid var(--warn); padding:8px 14px; margin:10px 0; }
+details { margin:12px 0 4px; } summary { cursor:pointer; color:var(--accent); font-weight:600; font-size:13.5px; }
+.two { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:10px; }
+td.r { text-align:right; font-family:var(--mono); }
+.muted { color:var(--muted); font-size:12.5px; } ul.gr { font-size:13px; color:var(--soft); }
+ol li { margin:4px 0; }
+.warnbox { background:var(--warn-bg); color:var(--ink); border:1px solid var(--warn); border-radius:10px; padding:12px 16px; }
+@media (max-width:900px) { .layout { grid-template-columns:1fr; } nav { position:static; height:auto; } main { padding:18px 16px 60px; } .two { grid-template-columns:1fr; } }
+@media print { nav { display:none; } .layout { display:block; } .case { break-inside:avoid; } }
+</style></head>
+<body><div class="layout">
+<nav><div class="brand">SAP Demo Verification</div><div class="sub">AP 3-Way Match · S/4HANA A4F · client 100</div>
+<a href="#start"><span class="sid">00</span>Before you start</a><a href="#tcodes"><span class="sid">TX</span>T-code click paths</a><a href="#undo"><span class="sid">UN</span>Undo invoices in SAP (manual)</a><a href="#pohistory"><span class="sid">PH</span>Reading PO history</a><a href="#statuses"><span class="sid">ST</span>Dashboard statuses</a><a href='#S01'><span class='sid'>S01</span>Perfect Match — Auto Post<span class='pill ok'>Auto-post</span></a><a href='#S02'><span class='sid'>S02</span>Price Within Tolerance — Auto Post<span class='pill ok'>Auto-post</span></a><a href='#S03'><span class='sid'>S03</span>Price Variance — Exceeds Tolerance<span class='pill warn'>Parked → approve</span></a><a href='#S04'><span class='sid'>S04</span>Short Delivery — Partial GRN<span class='pill warn'>Parked</span></a><a href='#S05'><span class='sid'>S05</span>Duplicate Invoice<span class='pill warn'>Duplicate</span></a><a href='#S06'><span class='sid'>S06</span>Tax Rate Mismatch<span class='pill warn'>Parked → reject</span></a><a href='#S07'><span class='sid'>S07</span>Unit of Measure Mismatch<span class='pill warn'>Parked</span></a><a href='#S08'><span class='sid'>S08</span>Payment Terms Mismatch<span class='pill warn'>Parked</span></a><a href='#S09'><span class='sid'>S09</span>Freight Overcharge<span class='pill warn'>Parked</span></a><a href='#S10'><span class='sid'>S10</span>Damaged Goods — QC Return<span class='pill warn'>Parked</span></a><a href='#S11'><span class='sid'>S11</span>Vendor Mismatch<span class='pill warn'>Parked</span></a><a href='#S12'><span class='sid'>S12</span>PO Closed in SAP<span class='pill warn'>Parked</span></a><a href='#S13'><span class='sid'>S13</span>GRN Missing — Goods Not Received<span class='pill err'>Exception</span></a><a href='#S14'><span class='sid'>S14</span>Future-Dated Invoice<span class='pill warn'>Parked</span></a><a href='#S15'><span class='sid'>S15</span>Arithmetic Error on Invoice<span class='pill warn'>Parked</span></a><a href='#S16'><span class='sid'>S16</span>Goods Received After Invoice Date<span class='pill warn'>Parked</span></a></nav>
+<main>
+<h1>SAP verification guide — every demo case</h1>
+<p class="lead">For each case: what to show in SAP <b>before</b> processing (proving the mismatch is real ERP data), what to click on the AP dashboard,
+and exactly where to confirm the result <b>in SAP afterwards</b> — then how to reset. All PO, goods-receipt and amount values below were read live
+from SAP when this guide was generated (15 Oct 2026 13:36). Invoice document numbers (51000xxxxx) are new on every run — take them from the dashboard's SAP column.</p>
+
+<section id="start" class="card">
+<h3 style="margin-top:0">Before you start</h3>
+<ol>
+<li><b>Log on to SAP:</b> open <b>SAP Logon 750</b> → double-click <b>New IDES S4HANA</b> (65.2.76.131, instance 57, SID A4F) → Client <code>100</code> · your SAP user · Language <code>EN</code> → Enter.</li>
+<li><b>Start the AP dashboard:</b> PowerShell in the project folder → <code>uv run --no-project uvicorn api.index:app --reload --port 8000</code> → browse to <b>http://localhost:8000</b>.</li>
+<li>Check the green <b>Live SAP</b> bar on the Overview page (SID A4F, client 100).</li>
+<li>Click <b>🧪 SAP Demo Cases → Reset all demo cases</b> so every case starts clean (it reverses/deletes any SAP invoice the agent created earlier). Every row's <b>Current status</b> must read <b>Not run yet</b>.</li>
+<li>In SAP, use the command field (top-left) — type <code>/nME23N</code> etc. and press Enter to jump between transactions.</li>
+</ol>
+<div class="warnbox"><b>Posting dates:</b> SAP's MM posting periods in company code 1710 are open only up to <b>04/2026</b>, so goods receipts and invoices carry
+posting date <b>30.04.2026</b>; the real date is in the <b>document date</b>. This is expected — not an error.</div>
+</section>
+
+<section id="tcodes" class="card">
+<h3 style="margin-top:0">T-code click paths (used in every case)</h3>
+<table class="ref"><thead><tr><th>T-code</th><th>Purpose</th><th>Clicks</th></tr></thead><tbody>
+<tr><td><span class="tc">ME23N</span></td><td>Display purchase order</td><td><code>/nME23N</code> → if another PO opens, click <b>Other Purchase Order</b> (Shift+F5) → enter PO number → <b>Other Document</b>.
+<br>• <b>Header</b> (expand with Ctrl+F2): tabs <b>Delivery/Invoice</b> (payment terms), <b>Conditions</b>, <b>Status</b>, <b>Org. Data</b>.
+<br>• <b>Item Overview</b> (Ctrl+F3): short text, PO qty, <b>OUn</b> (unit), net price.
+<br>• <b>Item</b> detail (Ctrl+F4) → pick the line in the item dropdown → tabs <b>Conditions</b> (PBXX price, FVA1 freight, DRV1 discount), <b>Invoice</b> (tax code, GR-Bsd IV, Final Invoice, <b>Taxes</b> button), <b>Delivery</b> (Delivery Completed), <b>Purchase Order History</b> (WE = goods receipt, RE-L = invoice).</td></tr>
+<tr><td><span class="tc">MB03</span></td><td>Display goods receipt (material document)</td><td><code>/nMB03</code> → Material Document + Mat. Doc. Year <code>2026</code> → Enter. Header (Ctrl+F2 / “Doc. Header”) shows Document Date, Posting Date, Entered by.
+Double-click an item → movement type, quantity, <b>Reason for Movement</b>, <b>Text</b>. (MIGO → Display → Material Document works too.)</td></tr>
+<tr><td><span class="tc">MIR4</span></td><td>Display supplier invoice (posted or parked)</td><td><code>/nMIR4</code> → Invoice Document No. + Fiscal Year <code>2026</code> → Enter. Title bar shows Display / <b>Parked</b>.
+Tabs: <b>Basic Data</b> (invoice date, reference, amount, tax), <b>Payment</b> (Pmnt Block), <b>PO reference</b> lines. Button <b>Follow-On Documents</b> → accounting document.</td></tr>
+<tr><td><span class="tc">MIR6</span></td><td>Invoice overview (find parked invoices)</td><td><code>/nMIR6</code> → Company Code <code>1710</code>, Fiscal Year <code>2026</code>, Entered by <code>RPA</code> (or Reference) → status checkboxes: tick <b>Parked</b> (and Posted if wanted) → Execute <b>F8</b>.</td></tr>
+<tr><td><span class="tc">MIR5</span></td><td>List invoice documents by reference</td><td><code>/nMIR5</code> → Company Code <code>1710</code> → Reference Document No. = invoice number (e.g. <code>INV-S01-2217</code>) → Execute <b>F8</b>. Shows originals and reversal documents.</td></tr>
+<tr><td><span class="tc">ME2N</span></td><td>List all demo POs</td><td><code>/nME2N</code> → Purchasing Document <code>4500002217</code> to <code>4500002232</code> → Scope of list <code>ALLES</code> → F8.</td></tr>
+</tbody></table>
+</section>
+<section id="undo" class="card">
+<h3 style="margin-top:0">Undo invoices manually in SAP — step by step (for SAP beginners)</h3>
+<p>The dashboard's <b>Reset</b> button does all of this for you automatically. Use these steps when you want to show it in SAP
+yourself, or clean up without the app. <b>Important:</b> you never reverse the <i>purchase order</i> — the PO and its goods receipt
+stay as they are. What gets undone is the <b>supplier invoice</b> the agent created against the PO.</p>
+
+<h4>First: is the invoice posted or parked?</h4>
+<table class="ref"><thead><tr><th>You see…</th><th>It is…</th><th>How to undo it</th></tr></thead><tbody>
+<tr><td>Dashboard: “Posted in SAP 51000…” · MIR4 title bar says <b>Display Invoice Document</b></td><td><b>Posted</b> (it is in the accounts)</td><td><b>Reverse</b> it with <span class="tc">MR8M</span> → section A</td></tr>
+<tr><td>Dashboard: “Parked in SAP 51000…” · MIR4 title bar says <b>Display Parked Invoice Document</b> / status Parked</td><td><b>Parked</b> (a draft, not in the accounts)</td><td><b>Delete</b> it in <span class="tc">MIR4</span> or <span class="tc">MIR6</span> → section B</td></tr>
+</tbody></table>
+
+<h4>A · Reverse a POSTED invoice — transaction MR8M</h4>
+<table class="steps"><thead><tr><th>#</th><th>Do this</th><th>Details</th></tr></thead><tbody>
+<tr><td class="n">1</td><td>In the SAP command field (top-left white box) type <code>/nMR8M</code> and press <b>Enter</b></td><td>Screen “Cancel Invoice Document” opens.</td></tr>
+<tr><td class="n">2</td><td><b>Invoice Document No.</b> = the posted number (e.g. <code>5100001732</code>)</td><td>Take it from the dashboard's SAP column / the run report.</td></tr>
+<tr><td class="n">3</td><td><b>Fiscal Year</b> = <code>2026</code></td><td></td></tr>
+<tr><td class="n">4</td><td><b>Reversal Reason</b> = <code>01</code></td><td>Press F4 on the field to pick from the list — 01 = “Reversal in current period”.</td></tr>
+<tr><td class="n">5</td><td><b>Posting Date</b> = <code>30.04.2026</code></td><td>Must be in an open MM period. If you use today's date SAP says <i>“Posting only possible in periods 2026/04 and 2026/03”</i> — just change the date.</td></tr>
+<tr><td class="n">6</td><td>Optional: click <b>Display Doc.</b> to double-check it is the right invoice, then press <b>F3</b> (Back)</td><td>Shows vendor, amount, reference INV-Sxx-xxxx.</td></tr>
+<tr><td class="n">7</td><td>Click <b>Save</b> (disk icon, or <b>Ctrl+S</b>) — some screens call it <b>Reverse</b></td><td>Status bar at the bottom: <i>“Document reversed with document number 51000xxxxx”</i>. Write that number down — it is the <b>reversal document</b>.</td></tr>
+<tr><td class="n">8</td><td>Check: <code>/nMIR5</code> → Company Code <code>1710</code> → Reference <code>INV-Sxx-xxxx</code> → <b>F8</b></td><td>You now see two documents: the original and its reversal. Net effect is zero.</td></tr>
+<tr><td class="n">9</td><td>Check: <code>/nME23N</code> → the PO → Item → <b>Purchase Order History</b> tab</td><td>The <b>RE-L</b> line now has a matching negative line (e.g. <code>20</code> and <code>20-</code>) — see “Reading Purchase Order History” below.</td></tr>
+</tbody></table>
+<p class="muted">Common messages: “Document already reversed” → nothing to do. “Posting period not open” → use 30.04.2026. You can only reverse an invoice that is <i>posted</i>; a parked one is deleted instead (B).</p>
+
+<h4>B · Delete a PARKED invoice — MIR4 (one document) or MIR6 (from a list)</h4>
+<table class="steps"><thead><tr><th>#</th><th>Do this</th><th>Details</th></tr></thead><tbody>
+<tr><td class="n">1</td><td><code>/nMIR4</code> → Enter</td><td></td></tr>
+<tr><td class="n">2</td><td>Enter <b>Invoice Document No.</b> (e.g. <code>5100001735</code>) and <b>Fiscal Year</b> <code>2026</code> → Enter</td><td>Title shows the document is <b>Parked</b>.</td></tr>
+<tr><td class="n">3</td><td>Switch to change mode: click the <b>Display ↔ Change</b> button (pencil/glasses icon) or press <b>Ctrl+F1</b></td><td>The fields become editable.</td></tr>
+<tr><td class="n">4</td><td>Menu <b>Invoice Document → Delete</b> (or <b>Shift+F2</b>)</td><td></td></tr>
+<tr><td class="n">5</td><td>Confirm the popup with <b>Yes</b></td><td>Status bar: <i>“Document 51000xxxxx deleted”</i>.</td></tr>
+<tr><td class="n">6</td><td>Check: <code>/nMIR6</code> → Company Code <code>1710</code>, Fiscal Year <code>2026</code>, tick <b>Parked</b> → <b>F8</b></td><td>The document is no longer listed.</td></tr>
+</tbody></table>
+<p class="muted"><b>Alternative (many at once):</b> <code>/nMIR6</code> → select parked documents (tick Parked, Entered by <code>RPA</code>) → <b>F8</b> → select the row(s) → click the <b>Delete</b> (trash) icon → confirm.</p>
+
+<h4>C · Post a parked invoice yourself (instead of Approve in the app)</h4>
+<table class="steps"><thead><tr><th>#</th><th>Do this</th><th>Details</th></tr></thead><tbody>
+<tr><td class="n">1</td><td><code>/nMIR4</code> → document number + 2026 → Enter → <b>Ctrl+F1</b> (change mode)</td><td></td></tr>
+<tr><td class="n">2</td><td>Click <b>Simulate</b> (optional) to see the accounting lines</td><td>The traffic light must be green (balance 0.00) to post.</td></tr>
+<tr><td class="n">3</td><td>Click <b>Post</b></td><td>Status bar: <i>“Document no. 51000xxxxx created”</i> (same number). If the variance is outside SAP's tolerance it posts with <b>payment block R</b> — visible on the <b>Payment</b> tab.</td></tr>
+</tbody></table>
+
+<h4>What the dashboard Reset does (so you can explain it)</h4>
+<ol>
+<li>Finds every supplier invoice in SAP with the invoice number as Reference (table RBKP) whose header text starts with <code>AP Agent</code> — it never touches invoices other people keyed in.</li>
+<li>Posted → reversed exactly like section A (reason 01, posting date 30.04.2026). Parked → deleted exactly like section B.</li>
+<li>Clears the app's processed log, pending review and exception for that invoice.</li>
+</ol>
+<div class="warnbox"><b>Do NOT</b> reverse the goods receipt (MIGO → Cancellation) or delete the purchase order (ME22N) for demo cleanup —
+that destroys the demo case. If it ever happens, re-create it with <code>python sap_demo_setup.py --only S0x --force</code>.</div>
+</section>
+
+<section id="pohistory" class="card">
+<h3 style="margin-top:0">Reading the Purchase Order History tab (ME23N)</h3>
+<p>ME23N → PO → Item detail → tab <b>Purchase Order History</b>. Every goods receipt and every invoice against this PO line is listed, grouped by transaction type:</p>
+<table class="ref"><thead><tr><th>Sh. Text</th><th>Meaning</th><th>Comes from</th></tr></thead><tbody>
+<tr><td><code>WE</code></td><td>Goods receipt (mvt <b>101</b>; a return shows <b>122</b> with a negative quantity)</td><td>Our setup script (MIGO / MB03 shows it)</td></tr>
+<tr><td><code>BzWE</code></td><td>Delivery costs at goods receipt — the planned freight (condition FVA1) accrued when goods arrived</td><td>Automatic with the GR</td></tr>
+<tr><td><code>RE-L</code></td><td>Invoice receipt for the goods (the supplier invoice line)</td><td>Agent post / approve</td></tr>
+<tr><td><code>BzRe</code></td><td>Invoice receipt for the delivery costs (the freight part of the invoice)</td><td>Agent post / approve</td></tr>
+<tr><td><code>Tr./Ev. …</code> (yellow rows)</td><td>Sub-totals per transaction type</td><td>—</td></tr>
+</tbody></table>
+<p><b>The minus sign</b> (<code>20-</code>, <code>250.00-</code>) means a <b>reversal</b>. Invoices come in pairs: e.g. <code>5100001674</code> RE-L <b>20</b> then
+<code>5100001682</code> RE-L <b>20-</b> = posted, then reversed by a Reset. When the RE-L sub-total is <b>0</b>, nothing is invoiced any more and the
+case can be run again. If the last line has no matching minus line, an invoice is still posted — reset it (A) before demoing.</p>
+<p class="muted">Posting Date shows 04/30/2026 for every line because MM periods in company code 1710 are open only up to 04/2026 — expected.</p>
+</section>
+
+<section id="statuses" class="card"><h3 style="margin-top:0">What the dashboard tells you after a click</h3>
+<ul>
+<li><b>Run</b> shows a live progress list, then a report card: every step it took (PO read from SAP, GR read, duplicate check, the 13 checks — failing ones in red),
+the decision, and what it did in SAP with the document number and the T-code to verify it (blue <code>SAP: …</code> hints).</li>
+<li><b>Current status</b> column (refreshes every 5 s, also after you approve/reject in the review tab):
+<ul><li><b>Not run yet</b> — nothing in the app or in SAP for this invoice.</li>
+<li><b>Posted in SAP 51000…</b> / <b>Approved · posted in SAP 51000…</b> — check in MIR4.</li>
+<li><b>Parked in SAP 51000… · waiting for review</b> — open the review (Pending Review page) to Approve or Reject.</li>
+<li><b>Rejected · parked doc … deleted in SAP</b> — MIR6 no longer lists it.</li>
+<li><b>Duplicate …</b> — the same invoice was already processed; nothing new was created in SAP.</li>
+<li><b>Exception — no goods receipt in SAP</b> — S13 by design.</li>
+<li><b>Already posted/parked in SAP … (earlier run) — click Reset</b> — SAP still holds an agent invoice from before (e.g. the app was restarted). Reset it first, otherwise Run reports a duplicate.</li></ul></li>
+<li><b>Reset</b> shows exactly which SAP document was reversed (with the reversal number) or deleted.</li>
+</ul></section>
+
+<section id="S01" class="case">
+  <div class="case-head"><span class="sid big">S01</span><h2>Perfect Match — Auto Post</h2><span class="pill ok">Auto-post</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002217</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF01 · EV Parts Inc.</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003060 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$15,255.00</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S01-2217 · $15,255.00</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">EV Parts Inc. · 2026-10-14 · Net 30</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Dell Laptop XPS-15</td><td class='r'>10 EA</td><td class='r'>$1,200.00</td><td>I1 6.00%</td></tr><tr><td>00020</td><td>Samsung Monitor 27-inch</td><td class='r'>5 EA</td><td class='r'>$450.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Dell Laptop XPS-15</td><td class='r'>10 EA</td><td class='r'>$1,200.00</td><td class='r'>$12,000.00</td></tr><tr><td>Samsung Monitor 27-inch</td><td class='r'>5 EA</td><td class='r'>$450.00</td><td class='r'>$2,250.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Dell Laptop XPS-15: received 10, accepted 10 — Good</li><li>Samsung Monitor 27-inch: received 5, accepted 5 — Good</li></ul>
+    <p class="muted">Freight on PO $150.00 vs invoice $150.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $855.00 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $855.00 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Header → <b>Delivery/Invoice</b> tab</td><td>Payment terms <code>NT30</code> (Net 30)</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>Item overview</td><td>Dell Laptop XPS-15 · 10 EA · $1,200.00 and Samsung Monitor 27-inch · 5 EA · $450.00</td></tr><tr><td class='n'>3</td><td><span class='tc'>ME23N</span></td><td>Item 10 → <b>Conditions</b> tab</td><td><code>PBXX</code> 1,200.00 and freight <code>FVA1</code> 150.00</td></tr><tr><td class='n'>4</td><td><span class='tc'>ME23N</span></td><td>Item → <b>Invoice</b> tab</td><td>Tax code <code>I1</code>, GR-Bsd IV ticked</td></tr><tr><td class='n'>5</td><td><span class='tc'>ME23N</span></td><td>Item → <b>Purchase Order History</b> tab</td><td>WE line, mvt 101, material doc 5000003060, qty 10 / 5</td></tr><tr><td class='n'>6</td><td><span class='tc'>MB03</span></td><td>Material doc 5000003060 / 2026</td><td>Goods receipt of both lines, entered by RPA</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S01 → <b>Run</b><br><span class='alt'>or: download <code>INV-S01-2217.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Perfect Match · every check green · SAP column shows <b>Posted 51000xxxxx</b></p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR4</span></td><td>Enter the SAP document number from the dashboard (SAP column) + fiscal year 2026 → Enter</td><td>Status <b>Posted</b> · Reference <code>INV-S01-2217</code> · Gross $15,255.00 · header text “AP Agent auto-post”</td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Tab <b>PO reference</b></td><td>One line per PO item, referencing GR 5000003060</td></tr><tr><td class='n'>3</td><td><span class='tc'>MIR4</span></td><td>Button <b>Follow-On Documents</b></td><td>Accounting document: vendor credit $15,255.00, GR/IR clearing debits, freight clearing</td></tr><tr><td class='n'>4</td><td><span class='tc'>ME23N</span></td><td>PO 4500002217 → Item → <b>Purchase Order History</b></td><td>New <b>RE-L</b> line (invoice receipt) under the WE line</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S01 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S01-2217</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S01-2217</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002217 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S02" class="case">
+  <div class="case-head"><span class="sid big">S02</span><h2>Price Within Tolerance — Auto Post</h2><span class="pill ok">Auto-post</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002218</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF02 · WaveCrest Labs</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003061 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$8,800.00</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S02-2218 · $8,853.00</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">WaveCrest Labs · 2026-10-14 · Net 45</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Steel Rods Grade A</td><td class='r'>200 KG</td><td class='r'>$25.00</td><td>I1 6.00%</td></tr><tr><td>00020</td><td>Welding Machine WM-500</td><td class='r'>2 EA</td><td class='r'>$1,500.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Steel Rods Grade A</td><td class='r'>200 KG</td><td class='r'>$25.00</td><td class='r'>$5,000.00</td></tr><tr><td>Welding Machine WM-500</td><td class='r'>2 EA</td><td class='r'>$1,525.00</td><td class='r'>$3,050.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Steel Rods Grade A: received 200, accepted 200 — Good</li><li>Welding Machine WM-500: received 2, accepted 2 — Good</li></ul>
+    <p class="muted">Freight on PO $320.00 vs invoice $320.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $480.00 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $483.00 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Item 20 (Welding Machine WM-500) → <b>Conditions</b> tab</td><td><code>PBXX</code> 1,500.00 — the invoice bills $1,525.00 (+1.7%)</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>Header → <b>Delivery/Invoice</b> tab</td><td>Payment terms <code>NT45</code></td></tr><tr><td class='n'>3</td><td><span class='tc'>ME23N</span></td><td>Item → <b>Purchase Order History</b></td><td>GR 5000003061: 200 KG + 2 EA received</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S02 → <b>Run</b><br><span class='alt'>or: download <code>INV-S02-2218.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Perfect Match — the 1.7% price difference is inside the 2% tolerance · <b>Posted</b> in SAP</p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR4</span></td><td>Enter the SAP document number from the dashboard (SAP column) + fiscal year 2026 → Enter</td><td>Status <b>Posted</b> · Reference <code>INV-S02-2218</code> · Gross $8,853.00 · header text “AP Agent auto-post”</td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Tab <b>PO reference</b></td><td>One line per PO item, referencing GR 5000003061</td></tr><tr><td class='n'>3</td><td><span class='tc'>MIR4</span></td><td>Button <b>Follow-On Documents</b></td><td>Accounting document: vendor credit $8,853.00, GR/IR clearing debits, freight clearing</td></tr><tr><td class='n'>4</td><td><span class='tc'>ME23N</span></td><td>PO 4500002218 → Item → <b>Purchase Order History</b></td><td>New <b>RE-L</b> line (invoice receipt) under the WE line</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S02 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S02-2218</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S02-2218</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002218 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S03" class="case">
+  <div class="case-head"><span class="sid big">S03</span><h2>Price Variance — Exceeds Tolerance</h2><span class="pill warn">Parked → approve</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002219</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF50 · BeSafe Inc</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003062 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$7,670.00</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S03-2219 · $8,316.60</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">BeSafe Inc · 2026-10-14 · Net 30</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Office Chair Ergonomic</td><td class='r'>20 EA</td><td class='r'>$150.00</td><td>I1 6.00%</td></tr><tr><td>00020</td><td>Executive Desk 180cm</td><td class='r'>10 EA</td><td class='r'>$400.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Office Chair Ergonomic</td><td class='r'>20 EA</td><td class='r'>$163.00</td><td class='r'>$3,260.00</td></tr><tr><td>Executive Desk 180cm</td><td class='r'>10 EA</td><td class='r'>$435.00</td><td class='r'>$4,350.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Office Chair Ergonomic: received 20, accepted 20 — Good</li><li>Executive Desk 180cm: received 10, accepted 10 — Good</li></ul>
+    <p class="muted">Freight on PO $250.00 vs invoice $250.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $420.00 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $456.60 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Item 10 → <b>Conditions</b> tab</td><td>Office Chair Ergonomic <code>PBXX</code> 150.00 (invoice: $163.00)</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>Item 20 → <b>Conditions</b> tab</td><td>Executive Desk 180cm <code>PBXX</code> 400.00 (invoice: $435.00)</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S03 → <b>Run</b><br><span class='alt'>or: download <code>INV-S03-2219.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Manual Review · ❌ Unit Price · SAP column shows <b>Parked 51000xxxxx</b></p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR6</span></td><td>Company Code 1710 · Fiscal Year 2026 · Entered by RPA · status: tick <b>Parked</b> → Execute (F8)</td><td>Document listed as parked · Reference <code>INV-S03-2219</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Open the parked document number shown on the Pending Review page</td><td>Title bar shows <b>Parked</b> · header text “AP Agent review” · amounts exactly as invoiced</td></tr></tbody></table>
+  <h4>④ Reviewer decision — Approve</h4><p class='click'>Dashboard: Pending Review page → <b>Open review →</b> → enter your name → <b>Approve</b></p><table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR4</span></td><td>Same document number as the parked one</td><td>Status now <b>Posted</b>; tab <b>Payment</b> may show payment block <code>R</code> (price variance outside SAP tolerance)</td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR6</span></td><td>Re-run the parked list</td><td>The document is no longer listed as parked</td></tr></tbody></table>
+  <h4>⑤ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S03 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S03-2219</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S03-2219</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002219 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S04" class="case">
+  <div class="case-head"><span class="sid big">S04</span><h2>Short Delivery — Partial GRN</h2><span class="pill warn">Parked</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002220</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF51 · MedInc</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003063 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$14,225.00</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S04-2220 · $14,225.00</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">MedInc · 2026-10-14 · Net 60</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Microcontroller MCU-32</td><td class='r'>500 EA</td><td class='r'>$12.50</td><td>I1 6.00%</td></tr><tr><td>00020</td><td>PCB Assembly Board</td><td class='r'>200 EA</td><td class='r'>$35.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Microcontroller MCU-32</td><td class='r'>500 EA</td><td class='r'>$12.50</td><td class='r'>$6,250.00</td></tr><tr><td>PCB Assembly Board</td><td class='r'>200 EA</td><td class='r'>$35.00</td><td class='r'>$7,000.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Microcontroller MCU-32: received 450, accepted 450 — 50 units still in transit</li><li>PCB Assembly Board: received 180, accepted 180 — 20 units not delivered</li></ul>
+    <p class="muted">Freight on PO $180.00 vs invoice $180.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $795.00 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $795.00 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Item overview</td><td>PO quantities 500 EA (MCU-32) and 200 EA (PCB board)</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>Item → <b>Purchase Order History</b></td><td>GR 5000003063: only <b>450</b> and <b>180</b> received</td></tr><tr><td class='n'>3</td><td><span class='tc'>MB03</span></td><td>Material doc 5000003063 → double-click each item</td><td>Item text “50 units still in transit” / “20 units not delivered”</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S04 → <b>Run</b><br><span class='alt'>or: download <code>INV-S04-2220.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Manual Review · ❌ Quantity — invoice bills 500/200, SAP received 450/180 · <b>Parked</b></p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR6</span></td><td>Company Code 1710 · Fiscal Year 2026 · Entered by RPA · status: tick <b>Parked</b> → Execute (F8)</td><td>Document listed as parked · Reference <code>INV-S04-2220</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Open the parked document number shown on the Pending Review page</td><td>Title bar shows <b>Parked</b> · header text “AP Agent review” · amounts exactly as invoiced</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S04 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S04-2220</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S04-2220</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002220 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S05" class="case">
+  <div class="case-head"><span class="sid big">S05</span><h2>Duplicate Invoice</h2><span class="pill warn">Duplicate</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002221</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF52 · RetireYou</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003064 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$2,900.00</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S05-2221 · $2,900.00</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">RetireYou · 2026-10-14 · Net 30</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Freight Forwarding Service</td><td class='r'>1 EA</td><td class='r'>$2,500.00</td><td>I0 0.00%</td></tr><tr><td>00020</td><td>Customs Clearance Fee</td><td class='r'>1 EA</td><td class='r'>$400.00</td><td>I0 0.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Freight Forwarding Service</td><td class='r'>1 EA</td><td class='r'>$2,500.00</td><td class='r'>$2,500.00</td></tr><tr><td>Customs Clearance Fee</td><td class='r'>1 EA</td><td class='r'>$400.00</td><td class='r'>$400.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Freight Forwarding Service: received 1, accepted 1 — Good</li><li>Customs Clearance Fee: received 1, accepted 1 — Good</li></ul>
+    <p class="muted">Freight on PO $0.00 vs invoice $0.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $0.00 (Sales Tax @ 0.00% (SAP I0 · CA00000000)) vs invoice $0.00 (Sales Tax Exempt @ 0.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Item → <b>Invoice</b> tab</td><td>Tax code <code>I0</code> (exempt services)</td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR5</span></td><td>Reference = INV-S05-2221</td><td>No invoice exists yet (before the first run)</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S05 → <b>Run</b>, wait for the reload, then <b>Run</b> again<br><span class='alt'>or: download <code>INV-S05-2221.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> 1st Run: Perfect Match · <b>Posted</b>.  2nd Run of the same invoice: Manual Review · ❌ Duplicate Check — reason cites the AP log <b>and</b> the SAP document · SAP: <b>Skipped</b> (nothing new created)</p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR4</span></td><td>Document number from the 1st run</td><td>Posted · Reference <code>INV-S05-2221</code> · Gross $2,900.00</td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S05-2221</code> → Execute</td><td>Still exactly <b>one</b> invoice for this reference — the 2nd submission created nothing</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S05 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S05-2221</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S05-2221</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002221 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S06" class="case">
+  <div class="case-head"><span class="sid big">S06</span><h2>Tax Rate Mismatch</h2><span class="pill warn">Parked → reject</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002222</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF01 · EV Parts Inc.</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003065 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$49,260.00</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S06-2222 · $50,295.00</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">EV Parts Inc. · 2026-10-14 · Net 45</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Lab Equipment Set</td><td class='r'>5 EA</td><td class='r'>$8,000.00</td><td>I1 6.00%</td></tr><tr><td>00020</td><td>Chemical Reagent Kit</td><td class='r'>50 PAC</td><td class='r'>$120.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Lab Equipment Set</td><td class='r'>5 EA</td><td class='r'>$8,000.00</td><td class='r'>$40,000.00</td></tr><tr><td>Chemical Reagent Kit</td><td class='r'>50 PACK</td><td class='r'>$120.00</td><td class='r'>$6,000.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Lab Equipment Set: received 5, accepted 5 — Good</li><li>Chemical Reagent Kit: received 50, accepted 50 — Good</li></ul>
+    <p class="muted">Freight on PO $500.00 vs invoice $500.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $2,760.00 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $3,795.00 (CA Sales Tax @ 8.25%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Item → <b>Invoice</b> tab</td><td>Tax code <code>I1</code>, jurisdiction <code>CA00000000</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>Item → <b>Invoice</b> tab → <b>Taxes</b> button</td><td>Sales tax 6.000 % (invoice charges 8.25%)</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S06 → <b>Run</b><br><span class='alt'>or: download <code>INV-S06-2222.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Manual Review · ❌ Tax Rate & Amount · <b>Parked</b></p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR6</span></td><td>Company Code 1710 · Fiscal Year 2026 · Entered by RPA · status: tick <b>Parked</b> → Execute (F8)</td><td>Document listed as parked · Reference <code>INV-S06-2222</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Open the parked document number shown on the Pending Review page</td><td>Title bar shows <b>Parked</b> · header text “AP Agent review” · amounts exactly as invoiced</td></tr></tbody></table>
+  <h4>④ Reviewer decision — Reject</h4><p class='click'>Dashboard: Pending Review page → <b>Open review →</b> → enter your name → <b>Reject</b></p><table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR4</span></td><td>Same document number</td><td>Document no longer exists as a parked invoice (deleted)</td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR6</span></td><td>Re-run the parked list</td><td>The document is gone</td></tr></tbody></table>
+  <h4>⑤ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S06 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S06-2222</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S06-2222</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002222 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S07" class="case">
+  <div class="case-head"><span class="sid big">S07</span><h2>Unit of Measure Mismatch</h2><span class="pill warn">Parked</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002223</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF02 · WaveCrest Labs</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003066 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$2,735.00</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S07-2223 · $2,735.00</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">WaveCrest Labs · 2026-10-14 · Net 30</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Industrial Solvent IPA</td><td class='r'>500 KG</td><td class='r'>$3.20</td><td>I1 6.00%</td></tr><tr><td>00020</td><td>Acetone Pure Grade</td><td class='r'>200 KG</td><td class='r'>$4.50</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Industrial Solvent IPA</td><td class='r'>500 L</td><td class='r'>$3.20</td><td class='r'>$1,600.00</td></tr><tr><td>Acetone Pure Grade</td><td class='r'>200 KG</td><td class='r'>$4.50</td><td class='r'>$900.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Industrial Solvent IPA: received 500, accepted 500 — Good</li><li>Acetone Pure Grade: received 200, accepted 200 — Good</li></ul>
+    <p class="muted">Freight on PO $85.00 vs invoice $85.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $150.00 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $150.00 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Item overview → <b>OUn</b> column</td><td>Industrial Solvent IPA ordered in <code>KG</code> (invoice bills in L)</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S07 → <b>Run</b><br><span class='alt'>or: download <code>INV-S07-2223.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Manual Review · ❌ Unit of Measure · <b>Parked</b></p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR6</span></td><td>Company Code 1710 · Fiscal Year 2026 · Entered by RPA · status: tick <b>Parked</b> → Execute (F8)</td><td>Document listed as parked · Reference <code>INV-S07-2223</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Open the parked document number shown on the Pending Review page</td><td>Title bar shows <b>Parked</b> · header text “AP Agent review” · amounts exactly as invoiced</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S07 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S07-2223</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S07-2223</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002223 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S08" class="case">
+  <div class="case-head"><span class="sid big">S08</span><h2>Payment Terms Mismatch</h2><span class="pill warn">Parked</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002224</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF50 · BeSafe Inc</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003067 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$33,266.00</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S08-2224 · $33,266.00</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">BeSafe Inc · 2026-10-14 · Net 15</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Cisco Switch 24-Port</td><td class='r'>3 EA</td><td class='r'>$4,200.00</td><td>I1 6.00%</td></tr><tr><td>00020</td><td>HP Server DL380 Gen10</td><td class='r'>1 EA</td><td class='r'>$18,500.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Cisco Switch 24-Port</td><td class='r'>3 EA</td><td class='r'>$4,200.00</td><td class='r'>$12,600.00</td></tr><tr><td>HP Server DL380 Gen10</td><td class='r'>1 EA</td><td class='r'>$18,500.00</td><td class='r'>$18,500.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Cisco Switch 24-Port: received 3, accepted 3 — Good</li><li>HP Server DL380 Gen10: received 1, accepted 1 — Good</li></ul>
+    <p class="muted">Freight on PO $300.00 vs invoice $300.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $1,866.00 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $1,866.00 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Header → <b>Delivery/Invoice</b> tab</td><td>Payment terms <code>NT30</code> — the invoice demands Net 15</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S08 → <b>Run</b><br><span class='alt'>or: download <code>INV-S08-2224.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Manual Review · ❌ Payment Terms · <b>Parked</b></p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR6</span></td><td>Company Code 1710 · Fiscal Year 2026 · Entered by RPA · status: tick <b>Parked</b> → Execute (F8)</td><td>Document listed as parked · Reference <code>INV-S08-2224</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Open the parked document number shown on the Pending Review page</td><td>Title bar shows <b>Parked</b> · header text “AP Agent review” · amounts exactly as invoiced</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S08 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S08-2224</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S08-2224</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002224 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S09" class="case">
+  <div class="case-head"><span class="sid big">S09</span><h2>Freight Overcharge</h2><span class="pill warn">Parked</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002225</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF51 · MedInc</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003068 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$3,754.00</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S09-2225 · $4,254.00</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">MedInc · 2026-10-14 · Net 30</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Packaging Material Box A</td><td class='r'>1,000 EA</td><td class='r'>$2.50</td><td>I1 6.00%</td></tr><tr><td>00020</td><td>Bubble Wrap Roll 50m</td><td class='r'>50 ROL</td><td class='r'>$18.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Packaging Material Box A</td><td class='r'>1,000 EA</td><td class='r'>$2.50</td><td class='r'>$2,500.00</td></tr><tr><td>Bubble Wrap Roll 50m</td><td class='r'>50 ROLL</td><td class='r'>$18.00</td><td class='r'>$900.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Packaging Material Box A: received 1,000, accepted 1,000 — Good</li><li>Bubble Wrap Roll 50m: received 50, accepted 50 — Good</li></ul>
+    <p class="muted">Freight on PO $150.00 vs invoice $650.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $204.00 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $204.00 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Item 10 → <b>Conditions</b> tab</td><td>Freight <code>FVA1</code> 150.00 — the invoice charges $650.00</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S09 → <b>Run</b><br><span class='alt'>or: download <code>INV-S09-2225.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Manual Review · ❌ Freight & Discount · <b>Parked</b></p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR6</span></td><td>Company Code 1710 · Fiscal Year 2026 · Entered by RPA · status: tick <b>Parked</b> → Execute (F8)</td><td>Document listed as parked · Reference <code>INV-S09-2225</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Open the parked document number shown on the Pending Review page</td><td>Title bar shows <b>Parked</b> · header text “AP Agent review” · amounts exactly as invoiced</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S09 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S09-2225</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S09-2225</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002225 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S10" class="case">
+  <div class="case-head"><span class="sid big">S10</span><h2>Damaged Goods — QC Return</h2><span class="pill warn">Parked</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002226</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF52 · RetireYou</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003069 (mvt 101), 5000003070 (mvt 122)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$9,237.56</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S10-2226 · $9,237.56</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">RetireYou · 2026-10-14 · Net 30</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>ARM Cortex MCU M4</td><td class='r'>500 EA</td><td class='r'>$15.00</td><td>I1 6.00%</td></tr><tr><td>00020</td><td>Voltage Regulator LM317</td><td class='r'>1,000 EA</td><td class='r'>$1.20</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>ARM Cortex MCU M4</td><td class='r'>500 EA</td><td class='r'>$15.00</td><td class='r'>$7,500.00</td></tr><tr><td>Voltage Regulator LM317</td><td class='r'>1,000 EA</td><td class='r'>$1.20</td><td class='r'>$1,200.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>ARM Cortex MCU M4: received 500, accepted 450 — 50 EA returned (Damaged) — ESD damage — failed QC</li><li>Voltage Regulator LM317: received 1,000, accepted 1,000 — Good</li></ul>
+    <p class="muted">Freight on PO $200.00 vs invoice $200.00 · Discount PO $174.00 vs invoice $174.00 · Tax PO $511.56 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $511.56 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Item 10 → <b>Purchase Order History</b></td><td>WE 101 qty 500 (doc 5000003069) and WE 122 qty −50 (doc 5000003070)</td></tr><tr><td class='n'>2</td><td><span class='tc'>MB03</span></td><td>Material doc 5000003070 / 2026 → double-click the item</td><td>Mvt type <code>122</code>, qty 50, <b>Reason for Movement 0003 Damaged</b>, text “ESD damage — failed QC”</td></tr><tr><td class='n'>3</td><td><span class='tc'>ME23N</span></td><td>Item 10 → <b>Conditions</b> tab</td><td>Discount <code>DRV1</code> −174.00 and freight <code>FVA1</code> 200.00</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S10 → <b>Run</b><br><span class='alt'>or: download <code>INV-S10-2226.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Manual Review · ❌ Quantity — invoice bills 500, only 450 accepted after the QC return · <b>Parked</b></p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR6</span></td><td>Company Code 1710 · Fiscal Year 2026 · Entered by RPA · status: tick <b>Parked</b> → Execute (F8)</td><td>Document listed as parked · Reference <code>INV-S10-2226</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Open the parked document number shown on the Pending Review page</td><td>Title bar shows <b>Parked</b> · header text “AP Agent review” · amounts exactly as invoiced</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S10 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S10-2226</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S10-2226</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002226 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S11" class="case">
+  <div class="case-head"><span class="sid big">S11</span><h2>Vendor Mismatch</h2><span class="pill warn">Parked</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002227</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF01 · EV Parts Inc.</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003071 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$5,261.00</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S11-2227 · $5,261.00</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">Delta Office Supplies · 2026-10-14 · Net 30</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>A4 Copy Paper Box of 5 Reams</td><td class='r'>100 CV</td><td class='r'>$28.50</td><td>I1 6.00%</td></tr><tr><td>00020</td><td>Whiteboard Marker Set 12 Pack</td><td class='r'>50 PAC</td><td class='r'>$8.00</td><td>I1 6.00%</td></tr><tr><td>00030</td><td>Filing Cabinet 4-Drawer</td><td class='r'>5 EA</td><td class='r'>$320.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>A4 Copy Paper Box of 5 Reams</td><td class='r'>100 CASE</td><td class='r'>$28.50</td><td class='r'>$2,850.00</td></tr><tr><td>Whiteboard Marker Set 12 Pack</td><td class='r'>50 PACK</td><td class='r'>$8.00</td><td class='r'>$400.00</td></tr><tr><td>Filing Cabinet 4-Drawer</td><td class='r'>5 EA</td><td class='r'>$320.00</td><td class='r'>$1,600.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>A4 Copy Paper Box of 5 Reams: received 100, accepted 100 — Good</li><li>Whiteboard Marker Set 12 Pack: received 50, accepted 50 — Good</li><li>Filing Cabinet 4-Drawer: received 5, accepted 5 — Good</li></ul>
+    <p class="muted">Freight on PO $120.00 vs invoice $120.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $291.00 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $291.00 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Header → <b>Supplier</b> field</td><td><code>USSU-VSF01</code> EV Parts Inc. — the invoice is from “Delta Office Supplies”</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S11 → <b>Run</b><br><span class='alt'>or: download <code>INV-S11-2227.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Manual Review · ❌ Vendor / Header · <b>Parked</b> (against the PO supplier)</p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR6</span></td><td>Company Code 1710 · Fiscal Year 2026 · Entered by RPA · status: tick <b>Parked</b> → Execute (F8)</td><td>Document listed as parked · Reference <code>INV-S11-2227</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Open the parked document number shown on the Pending Review page</td><td>Title bar shows <b>Parked</b> · header text “AP Agent review” · amounts exactly as invoiced</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S11 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S11-2227</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S11-2227</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002227 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S12" class="case">
+  <div class="case-head"><span class="sid big">S12</span><h2>PO Closed in SAP</h2><span class="pill warn">Parked</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002228</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF02 · WaveCrest Labs</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003072 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$1,192.50</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S12-2228 · $1,192.50</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">WaveCrest Labs · 2026-10-14 · Net 30</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Ergonomic Keyboard K400</td><td class='r'>25 EA</td><td class='r'>$45.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Ergonomic Keyboard K400</td><td class='r'>25 EA</td><td class='r'>$45.00</td><td class='r'>$1,125.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Ergonomic Keyboard K400: received 25, accepted 25 — Good</li></ul>
+    <p class="muted">Freight on PO $0.00 vs invoice $0.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $67.50 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $67.50 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Item → <b>Delivery</b> tab</td><td><b>Delivery Completed</b> ticked</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>Item → <b>Invoice</b> tab</td><td><b>Final Invoice</b> ticked — buyer closed the PO</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S12 → <b>Run</b><br><span class='alt'>or: download <code>INV-S12-2228.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Manual Review · ❌ PO Validity (status Closed) · <b>Parked</b></p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR6</span></td><td>Company Code 1710 · Fiscal Year 2026 · Entered by RPA · status: tick <b>Parked</b> → Execute (F8)</td><td>Document listed as parked · Reference <code>INV-S12-2228</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Open the parked document number shown on the Pending Review page</td><td>Title bar shows <b>Parked</b> · header text “AP Agent review” · amounts exactly as invoiced</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S12 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S12-2228</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S12-2228</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002228 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S13" class="case">
+  <div class="case-head"><span class="sid big">S13</span><h2>GRN Missing — Goods Not Received</h2><span class="pill err">Exception</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002229</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF50 · BeSafe Inc</span></div>
+    <div><span class="k">Goods receipts</span><span class="v"><b>none</b></span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$2,796.00</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S13-2229 · $2,796.00</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">BeSafe Inc · 2026-10-14 · Net 30</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Projector Epson EB-X51</td><td class='r'>4 EA</td><td class='r'>$650.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Projector Epson EB-X51</td><td class='r'>4 EA</td><td class='r'>$650.00</td><td class='r'>$2,600.00</td></tr></tbody></table>
+    </div>
+    
+    <p class="muted">Freight on PO $40.00 vs invoice $40.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $156.00 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $156.00 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Item detail</td><td>There is <b>no Purchase Order History tab</b> — nothing has been received</td></tr><tr><td class='n'>2</td><td><span class='tc'>MB51 / ME2N</span></td><td>optional</td><td>No goods movement exists for this PO</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S13 → <b>Run</b><br><span class='alt'>or: download <code>INV-S13-2229.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Incomplete — Missing Documents · listed on <b>Exceptions</b> · reason: no goods receipt posted in SAP · SAP: nothing created</p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S13-2229</code> → Execute</td><td>No invoice document — nothing was created in SAP</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S13 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S13-2229</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>—</span></td><td>Nothing to undo in SAP</td><td>Reset only clears the Exceptions entry</td></tr></tbody></table>
+</section>
+<section id="S14" class="case">
+  <div class="case-head"><span class="sid big">S14</span><h2>Future-Dated Invoice</h2><span class="pill warn">Parked</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002230</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF51 · MedInc</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003073 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$1,268.40</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S14-2230 · $1,268.40</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">MedInc · 2026-11-13 · Net 30</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Network Cable Cat6 305m</td><td class='r'>12 ROL</td><td class='r'>$95.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Network Cable Cat6 305m</td><td class='r'>12 ROLL</td><td class='r'>$95.00</td><td class='r'>$1,140.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Network Cable Cat6 305m: received 12, accepted 12 — Good</li></ul>
+    <p class="muted">Freight on PO $60.00 vs invoice $60.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $68.40 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $68.40 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N / MB03</span></td><td>PO + GR 5000003073</td><td>PO and GR are fine — the problem is the invoice date 2026-11-13 (in the future)</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S14 → <b>Run</b><br><span class='alt'>or: download <code>INV-S14-2230.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Manual Review · ❌ Invoice Date · <b>Parked</b></p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR6</span></td><td>Company Code 1710 · Fiscal Year 2026 · Entered by RPA · status: tick <b>Parked</b> → Execute (F8)</td><td>Document listed as parked · Reference <code>INV-S14-2230</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Open the parked document number shown on the Pending Review page</td><td>Title bar shows <b>Parked</b> · header text “AP Agent review” · amounts exactly as invoiced</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S14 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S14-2230</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S14-2230</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002230 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S15" class="case">
+  <div class="case-head"><span class="sid big">S15</span><h2>Arithmetic Error on Invoice</h2><span class="pill warn">Parked</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002231</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF52 · RetireYou</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003074 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$2,000.40</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S15-2231 · $2,206.40</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">RetireYou · 2026-10-14 · Net 30</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Safety Helmet Class E</td><td class='r'>40 EA</td><td class='r'>$32.00</td><td>I1 6.00%</td></tr><tr><td>00020</td><td>Hi-Vis Safety Vest</td><td class='r'>40 EA</td><td class='r'>$14.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Safety Helmet Class E</td><td class='r'>40 EA</td><td class='r'>$32.00</td><td class='r'>$1,380.00</td></tr><tr><td>Hi-Vis Safety Vest</td><td class='r'>40 EA</td><td class='r'>$14.00</td><td class='r'>$560.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Safety Helmet Class E: received 40, accepted 40 — Good</li><li>Hi-Vis Safety Vest: received 40, accepted 40 — Good</li></ul>
+    <p class="muted">Freight on PO $50.00 vs invoice $50.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $110.40 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $116.40 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Item overview</td><td>Safety Helmet 40 × $32.00 = $1,280.00 (the invoice prints $1,380.00 and overstates the total by $100)</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S15 → <b>Run</b><br><span class='alt'>or: download <code>INV-S15-2231.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Manual Review · ❌ Line Amounts · ❌ Invoice Total · <b>Parked</b></p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR6</span></td><td>Company Code 1710 · Fiscal Year 2026 · Entered by RPA · status: tick <b>Parked</b> → Execute (F8)</td><td>Document listed as parked · Reference <code>INV-S15-2231</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Open the parked document number shown on the Pending Review page</td><td>Title bar shows <b>Parked</b> · header text “AP Agent review” · amounts exactly as invoiced</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S15 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S15-2231</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S15-2231</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002231 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<section id="S16" class="case">
+  <div class="case-head"><span class="sid big">S16</span><h2>Goods Received After Invoice Date</h2><span class="pill warn">Parked</span></div>
+  <div class="facts">
+    <div><span class="k">SAP PO</span><span class="v">4500002232</span></div>
+    <div><span class="k">Supplier</span><span class="v">USSU-VSF01 · EV Parts Inc.</span></div>
+    <div><span class="k">Goods receipts</span><span class="v">5000003075 (mvt 101)</span></div>
+    <div><span class="k">PO amount (SAP)</span><span class="v">$2,528.00</span></div>
+    <div><span class="k">Invoice</span><span class="v">INV-S16-2232 · $2,528.00</span></div>
+    <div><span class="k">Invoice vendor / date / terms</span><span class="v">EV Parts Inc. · 2026-10-04 · Net 30</span></div>
+  </div>
+  <details><summary>PO lines in SAP vs invoice lines</summary>
+    <div class="two">
+      <table class="mini"><thead><tr><th>Item</th><th>SAP PO line</th><th>Qty</th><th>Price</th><th>Tax</th></tr></thead><tbody><tr><td>00010</td><td>Conference Table 8-Seater</td><td class='r'>2 EA</td><td class='r'>$1,150.00</td><td>I1 6.00%</td></tr></tbody></table>
+      <table class="mini"><thead><tr><th>Invoice line</th><th>Qty</th><th>Price</th><th>Amount</th></tr></thead><tbody><tr><td>Conference Table 8-Seater</td><td class='r'>2 EA</td><td class='r'>$1,150.00</td><td class='r'>$2,300.00</td></tr></tbody></table>
+    </div>
+    <ul class='gr'><li>Conference Table 8-Seater: received 2, accepted 2 — Good</li></ul>
+    <p class="muted">Freight on PO $90.00 vs invoice $90.00 · Discount PO $0.00 vs invoice $0.00 · Tax PO $138.00 (Sales Tax @ 6.00% (SAP I1 · CA00000000)) vs invoice $138.00 (CA Sales Tax @ 6.00%)</p>
+  </details>
+
+  <h4>① Show the data in SAP (before processing)</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>ME23N</span></td><td>Header → <b>Org. Data</b> / document date</td><td>PO date 2026-09-24</td></tr><tr><td class='n'>2</td><td><span class='tc'>MB03</span></td><td>Material doc 5000003075 → header <b>Document Date</b></td><td>Goods received 2026-10-14 — but the invoice is dated 2026-10-04</td></tr></tbody></table>
+  <h4>② Process the invoice</h4>
+  <p class='click'>Dashboard: <b>Overview → 🧪 SAP Demo Cases</b> → row S16 → <b>Run</b><br><span class='alt'>or: download <code>INV-S16-2232.pdf</code> (click the invoice #) and upload it under <b>Upload Invoice Manually</b> / email it to the mailbox</span></p>
+  <p class="expect"><b>Expected on the dashboard:</b> Manual Review · ❌ GRN Validation (goods received after the invoice date) · <b>Parked</b></p>
+  <h4>③ Verify in SAP</h4>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR6</span></td><td>Company Code 1710 · Fiscal Year 2026 · Entered by RPA · status: tick <b>Parked</b> → Execute (F8)</td><td>Document listed as parked · Reference <code>INV-S16-2232</code></td></tr><tr><td class='n'>2</td><td><span class='tc'>MIR4</span></td><td>Open the parked document number shown on the Pending Review page</td><td>Title bar shows <b>Parked</b> · header text “AP Agent review” · amounts exactly as invoiced</td></tr></tbody></table>
+  
+  <h4>④ Reset for the next demo</h4>
+  <p class="click">Dashboard: <b>SAP Demo Cases</b> → row S16 → <b>Reset</b> (or <b>Processed → Reuse a test invoice</b> → <code>INV-S16-2232</code>)</p>
+  <table class='steps'><thead><tr><th>#</th><th>T-code</th><th>Where to click</th><th>What you should see</th></tr></thead><tbody><tr><td class='n'>1</td><td><span class='tc'>MIR5</span></td><td>Company Code 1710 · Reference <code>INV-S16-2232</code> → Execute</td><td>A posted invoice now has a <b>reversal document</b>; a parked one is gone. No live invoice remains.</td></tr><tr><td class='n'>2</td><td><span class='tc'>ME23N</span></td><td>PO 4500002232 → Item → <b>Purchase Order History</b></td><td>Invoice receipt and its reversal net to zero — the PO is invoiceable again</td></tr></tbody></table>
+</section>
+<p class="muted" style="margin-top:30px">Generated from live SAP reads (15 Oct 2026 13:36). Re-generate after re-running <code>sap_demo_setup.py --force</code>, because PO numbers change.</p>
+</main></div></body></html>

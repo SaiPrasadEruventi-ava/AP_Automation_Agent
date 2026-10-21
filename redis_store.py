@@ -407,3 +407,27 @@ def exception_clear_all() -> int:
         r.hdel(_EXCEPTIONS_HASH, key)
         r.zrem(_EXCEPTIONS_ZSET, key)
     return len(keys)
+
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Lookups used by the demo reset (run_ap.reset_invoice)
+# ─────────────────────────────────────────────────────────────────────
+
+def invoice_detail_delete(invoice_number: str) -> None:
+    r = _get_client()
+    r.delete(_k("invoice_detail", invoice_number))
+
+
+def exception_keys_for_invoice(invoice_number: str) -> list:
+    return [e.get("key") for e in exception_get_all()
+            if e.get("invoice_number") == invoice_number and e.get("key")]
+
+
+def pending_tokens_for_invoice(invoice_number: str) -> list:
+    tokens = []
+    for token in pending_list_tokens():
+        rec = pending_get(token)
+        if (rec.get("invoice_data") or {}).get("invoice_number") == invoice_number:
+            tokens.append(token)
+    return tokens

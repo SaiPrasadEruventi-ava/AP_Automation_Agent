@@ -28,7 +28,8 @@ def _get_llm():
     api_key = os.getenv("MISTRAL_API_KEY", "")
     if not api_key:
         raise EnvironmentError("MISTRAL_API_KEY not set in .env")
-    return ChatMistralAI(model="mistral-small-latest", temperature=0.0, api_key=api_key)
+    return ChatMistralAI(model="mistral-small-latest", temperature=0.0, api_key=api_key,
+                         max_retries=1)  # fail fast: extract_invoice falls back to the rule-based reader
 
 
 def _call_llm(system_prompt: str, text: str) -> dict:
@@ -118,9 +119,67 @@ Required JSON schema:
 }"""
 
 
+# After the LLM fails (e.g. Mistral 429 "Rate limit exceeded" once the
+# account quota is used up), skip it for this long so every upload doesn't
+# first sit through the client's own retries before falling back.
+_LLM_COOLDOWN_SECONDS = 600
+_llm_down_until = 0.0
+
+
+def _extractor_mode() -> str:
+    """AP_EXTRACTOR: auto (LLM, rule-based fallback) | llm | rules."""
+    return os.getenv("AP_EXTRACTOR", "auto").strip().lower()
+
+
 def extract_invoice(text: str) -> dict:
+    """
+    Invoice fields from PDF text. The LLM is the primary reader; when it is
+    unavailable (no key, rate-limited, error) or returns nothing usable,
+    invoice_rules_parser reads clearly labelled invoices without it. The
+    result carries `_extractor` ("llm" / "rules") so the dashboard can say
+    which reader was used, and `_extractor_note` when it fell back.
+    """
+    import time
+    from invoice_rules_parser import parse_invoice
+    global _llm_down_until
+
     print("  🔍 Extracting Invoice fields...")
-    data = _call_llm(INVOICE_PROMPT, text)
+    mode = _extractor_mode()
+    data, note = {}, ""
+    if mode == "rules":
+        data = parse_invoice(text)
+        if data:
+            data["_extractor"] = "rules"
+    llm_allowed = mode in ("auto", "llm") or (mode == "rules" and not data)
+    if not data and llm_allowed:
+        if time.time() < _llm_down_until and mode == "auto":
+            note = "AI reader skipped — it was rate-limited/unavailable a moment ago"
+        elif not os.getenv("MISTRAL_API_KEY"):
+            note = "AI reader not configured (MISTRAL_API_KEY missing)"
+        else:
+            try:
+                data = _call_llm(INVOICE_PROMPT, text)
+                if data.get("invoice_number"):
+                    data["_extractor"] = "llm"
+                else:
+                    note = "AI reader returned no invoice fields"
+                    data = {}
+            except Exception as e:
+                msg = str(e)
+                note = ("AI reader rate-limited by Mistral (HTTP 429 — account quota/limit reached)"
+                        if "429" in msg or "rate" in msg.lower() else f"AI reader failed: {msg[:160]}")
+                _llm_down_until = time.time() + _LLM_COOLDOWN_SECONDS
+                print(f"    ⚠️  {note}")
+                if mode == "llm":
+                    raise
+    if not data and mode != "llm":
+        data = parse_invoice(text)
+        if data:
+            data["_extractor"] = "rules"
+            data["_extractor_note"] = note
+            print(f"    ↪ rule-based reader used ({note})")
+        elif note:
+            raise RuntimeError(f"{note}; the rule-based reader could not read this layout either")
     print(f"    Invoice: {data.get('invoice_number','')} | "
           f"{data.get('vendor_name','')} | ${data.get('total_amount',0)}")
     print(f"      Subtotal=${data.get('subtotal',0)} Tax=${data.get('tax',0)} "

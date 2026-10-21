@@ -122,6 +122,22 @@ async def review_page(token: str):
         f"<li style='margin-bottom:6px'>{r}</li>" for r in reasons
     ) or "<li>No specific reasons recorded.</li>"
 
+    sap = decision_info.get("sap_posting") or {}
+    if sap.get("action") == "Parked":
+        sap_html = (f"<div class='sapbox'><strong>🏦 In SAP:</strong> this invoice is <b>parked</b> as document "
+                    f"<code>{sap.get('document')}</code> / {sap.get('fiscal_year')} (check it: MIR4 → {sap.get('document')})."
+                    f"<ul><li><b>Approve</b> → SAP <b>posts</b> document {sap.get('document')}</li>"
+                    f"<li><b>Reject</b> → SAP <b>deletes</b> the parked document</li>"
+                    f"<li><b>Request Clarification</b> → it stays parked in SAP</li></ul></div>")
+    elif sap.get("action") == "Skipped":
+        sap_html = ("<div class='sapbox'><strong>🏦 In SAP:</strong> nothing was created (duplicate). "
+                    "Approving will <b>not</b> post it again.</div>")
+    elif sap.get("action") == "Failed":
+        sap_html = (f"<div class='sapbox'><strong>🏦 In SAP:</strong> SAP rejected the invoice — {sap.get('error', '')}. "
+                    "Approving will try to post it once more.</div>")
+    else:
+        sap_html = ""
+
     return HTMLResponse(f"""
 <!DOCTYPE html>
 <html>
@@ -152,6 +168,9 @@ async def review_page(token: str):
     .btn:hover{{opacity:.9}} .btn:disabled{{opacity:.5;cursor:not-allowed}}
     .result{{display:none;text-align:center;padding:30px}}
     .err{{color:#c0392b;font-size:13px;margin-top:10px;text-align:center}}
+    .sapbox{{background:#eef4ff;border-left:4px solid #1d4ed8;border-radius:6px;padding:12px 16px;margin-top:12px;font-size:13.5px}}
+    .sapbox ul{{margin:6px 0 0;padding-left:20px}} code{{background:#e2e8f0;padding:1px 5px;border-radius:4px}}
+    .busy{{text-align:center;color:#555;font-size:13px;margin-top:12px;display:none}}
   </style>
 </head>
 <body>
@@ -170,6 +189,7 @@ async def review_page(token: str):
       <strong>⚠️ Why this needs review:</strong>
       <ul>{reasons_html}</ul>
     </div>
+    {sap_html}
   </div>
 
   <div class="card" id="decision-form">
@@ -185,12 +205,14 @@ async def review_page(token: str):
       <button class="btn clarify" onclick="decide('Request Clarification')">🔼 Request Clarification</button>
     </div>
     <div class="err" id="err"></div>
+    <div class="busy" id="busy">⏳ Recording your decision and updating SAP…</div>
   </div>
 
   <div class="card result" id="done">
     <h2 id="done-title" style="margin-top:0"></h2>
     <p id="done-body" style="color:#555"></p>
-    <p style="color:#999;font-size:12px">You may close this window.</p>
+    <p id="done-sap" class="sapbox" style="display:none;text-align:left"></p>
+    <p><a href="/dashboard/pending" style="color:#1d4ed8">← Back to the dashboard</a></p>
   </div>
 
   <script>
@@ -204,6 +226,7 @@ async def review_page(token: str):
       }}
       errEl.textContent = '';
       document.querySelectorAll('.btn').forEach(b => b.disabled = true);
+      document.getElementById('busy').style.display = 'block';
 
       try {{
         const res = await fetch('/api/decide', {{
@@ -222,8 +245,18 @@ async def review_page(token: str):
           document.getElementById('done-title').textContent = titles[decision] || 'Decision Recorded';
           document.getElementById('done-body').textContent =
             `Invoice ${{data.invoice_number || ''}} — recorded by ${{reviewer}}.`;
+          const sap = data.sap_posting || {{}};
+          const sapMsg = {{
+            'Posted':  `SAP: invoice document ${{sap.document}} is now POSTED` + (sap.payment_block ? ` (payment block ${{sap.payment_block}})` : '') + ` — verify in MIR4 → ${{sap.document}}.`,
+            'Deleted': `SAP: parked document ${{sap.document}} has been DELETED — it no longer appears in MIR6.`,
+            'Parked':  `SAP: document ${{sap.document}} stays PARKED until clarified.`,
+            'Skipped': `SAP: nothing posted — ${{(sap.messages || []).join(' ')}}`,
+            'Failed':  `SAP could not complete the action: ${{sap.error}} — the document stays as it was; finish it in SAP (MIR4).`,
+          }}[sap.action];
+          if (sapMsg) {{ const el = document.getElementById('done-sap'); el.textContent = sapMsg; el.style.display = 'block'; }}
           document.getElementById('done').style.display = 'block';
         }} else {{
+          document.getElementById('busy').style.display = 'none';
           errEl.textContent = data.detail || 'Error submitting decision. Please try again.';
           document.querySelectorAll('.btn').forEach(b => b.disabled = false);
         }}
@@ -240,7 +273,7 @@ async def review_page(token: str):
 # ── API ──────────────────────────────────────────────────────────────────
 
 @app.post("/api/decide")
-async def api_decide(request: ApprovalRequest):
+def api_decide(request: ApprovalRequest):  # sync: resuming posts to SAP (blocking RFC)
     """JSON endpoint used by the review page's form submission."""
     result = _process_decision(
         request.token, request.decision,
@@ -250,28 +283,36 @@ async def api_decide(request: ApprovalRequest):
         "status":         "success",
         "invoice_number": result.get("invoice_number"),
         "final_status":   result.get("final_status"),
+        "sap_posting":    result.get("sap_posting") or {},
     }
 
 
 @app.get("/approve/{token}")
-async def quick_approve(token: str, name: str = "AP Reviewer"):
+def quick_approve(token: str, name: str = "AP Reviewer"):
     """One-click approve link from the email — no comments, default reviewer name."""
     result = _process_decision(token, "Approve", name)
     return _one_click_result_page("✅ Invoice Approved", "#27AE60", result)
 
 
 @app.get("/reject/{token}")
-async def quick_reject(token: str, name: str = "AP Reviewer"):
+def quick_reject(token: str, name: str = "AP Reviewer"):
     """One-click reject link from the email."""
     result = _process_decision(token, "Reject", name)
     return _one_click_result_page("❌ Invoice Rejected", "#E74C3C", result)
 
 
 @app.get("/clarify/{token}")
-async def quick_clarify(token: str, name: str = "AP Reviewer"):
+def quick_clarify(token: str, name: str = "AP Reviewer"):
     """One-click clarification-request link from the email."""
     result = _process_decision(token, "Request Clarification", name)
     return _one_click_result_page("🔼 Clarification Requested", "#F39C12", result)
+
+
+def _sap_line(sap: dict) -> str:
+    a, d = sap.get("action"), sap.get("document", "")
+    return {"Posted": f"SAP: invoice {d} posted (MIR4 → {d}).",
+            "Deleted": f"SAP: parked invoice {d} deleted.",
+            "Failed": f"SAP could not complete: {sap.get('error', '')}"}.get(a, "")
 
 
 def _one_click_result_page(title: str, colour: str, result: dict) -> HTMLResponse:
@@ -281,6 +322,7 @@ def _one_click_result_page(title: str, colour: str, result: dict) -> HTMLRespons
 text-align:center;color:#2c3e50">
   <h2 style="color:{colour}">{title}</h2>
   <p>Invoice <strong>{inv_num}</strong> has been recorded.</p>
+  <p>{_sap_line(result.get("sap_posting") or {})}</p>
   <p style="color:#999;font-size:13px">You may close this window.</p>
 </body></html>""")
 

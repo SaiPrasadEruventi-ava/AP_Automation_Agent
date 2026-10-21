@@ -33,6 +33,14 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+# Windows consoles default to cp1252, which cannot print the emoji this
+# app logs with — reconfigure once at the entry point instead.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+    except (AttributeError, ValueError):
+        pass
+
 import argparse
 import json
 import re
@@ -193,7 +201,11 @@ def process_invoice_set(invoice_data:    dict,
     missing = []
     if not invoice_data: missing.append("Invoice")
     if not po_data:       missing.append("PO (not found in ERP)")
-    if not grn_data:      missing.append("GRN (not found in ERP — goods may not be received yet)")
+    if not grn_data:
+        missing.append(
+            f"GRN (no goods receipt posted in {po_data.get('erp_source') or 'ERP'} for PO "
+            f"{po_data.get('po_number', '')} — goods not received yet)" if po_data
+            else "GRN (not found in ERP — goods may not be received yet)")
 
     if missing:
         print(f"\n  ⚠️  Missing documents: {missing}")
@@ -228,10 +240,17 @@ def process_invoice_set(invoice_data:    dict,
             recipient          = RECIPIENT,
             variance_threshold = VARIANCE_THRESHOLD,
         )
+        _persist_exception_record(
+            invoice_data or {}, "Incomplete — Missing Documents",
+            partial_decision["reasons"], po_number=(po_data or {}).get("po_number", ""),
+            subject=(email_ref or {}).get("subject", "Manual upload"),
+            po_data=po_data or {}, grn_data=grn_data or {}, summary=summary,
+        )
         if email_ref:
             from mail_provider import mark_exception
             mark_exception(email_ref)
         return {"final_status": "Incomplete — Missing Documents", "missing": missing,
+                "reasons": partial_decision["reasons"],
                 "invoice_number": (invoice_data or {}).get("invoice_number", "unknown")}
 
 
@@ -242,6 +261,7 @@ def process_invoice_set(invoice_data:    dict,
         vendor_name    = invoice_data.get("vendor_name", ""),
         amount         = invoice_data.get("total_amount", 0),
         invoice_date   = invoice_data.get("invoice_date", ""),
+        vendor_code    = po_data.get("sap_vendor", ""),
     )
 
     # ── 2. 3-Way Matching ─────────────────────────────────────────────
@@ -255,6 +275,9 @@ def process_invoice_set(invoice_data:    dict,
         "duplicate_check": dup_check,
     }
     decision_info = apply_business_rules(matching, VARIANCE_THRESHOLD, state=_match_state)
+    # ── 2b. Reflect the decision in SAP: post a clean invoice, park one
+    # that needs review (may downgrade a Perfect Match SAP refuses) ────
+    _sap_sync_decision(invoice_data, po_data, decision_info, dup_check)
     final_status  = decision_info["decision"]
     reviewer_info = None
 
@@ -278,6 +301,7 @@ def process_invoice_set(invoice_data:    dict,
                 invoice_data, po_data, grn_data, matching, decision_info,
                 supporting_docs=supporting_docs,
                 email_entry_id=email_entry_id,
+                dup_check=dup_check,
             )
             send_review_request_email(
                 invoice_data  = invoice_data,
@@ -296,6 +320,7 @@ def process_invoice_set(invoice_data:    dict,
                 "final_status":   "Pending Web Review",
                 "reasons":         decision_info.get("reasons", []),
                 "review_token":    token,
+                "sap_posting":     decision_info.get("sap_posting"),
                 "subject":         None,  # filled in by caller if applicable
             }
 
@@ -311,6 +336,8 @@ def process_invoice_set(invoice_data:    dict,
             )
             final_status  = review["final_status"]
             reviewer_info = review
+            _sap_apply_review(invoice_data, po_data, decision_info, final_status,
+                              dup_check.get("is_duplicate", False))
         else:  # "email_only"
             final_status = "Manual Review Required"
             print(f"\n  Review request sent to {REVIEWER_EMAIL}")
@@ -394,6 +421,7 @@ def _finalize_decision(invoice_data: dict, po_data: dict, grn_data: dict,
             currency       = invoice_data.get("currency", "USD"),
             invoice_date   = invoice_data.get("invoice_date", ""),
             status         = final_status,
+            sap_posting    = decision_info.get("sap_posting"),
         )
 
     # ── Move source email ───────────────────────────────────────────────
@@ -427,6 +455,7 @@ def _finalize_decision(invoice_data: dict, po_data: dict, grn_data: dict,
             + decision_info.get("reasons", [])
         ),
         "reviewer":        reviewer_info.get("reviewer") if reviewer_info else None,
+        "sap_posting":     decision_info.get("sap_posting"),
         "summary":         summary,
         "supporting_docs": [d["file_name"] for d in (supporting_docs or [])],
     }
@@ -480,7 +509,9 @@ def resume_after_review(token: str, decision: str, reviewer: str,
     # minimal shape _finalize_decision needs from decision_info's reasons
     # (a duplicate would already be reflected there; this only affects
     # whether we re-register in the dup log, which is harmless either way).
-    dup_check = {"is_duplicate": False}
+    dup_check = record.get("dup_check") or {"is_duplicate": False}
+    _sap_apply_review(invoice_data, po_data, decision_info, final_status,
+                      dup_check.get("is_duplicate", False))
 
     # Reconstruct a minimal email_ref so _finalize_decision can still
     # move the source email, if Graph is reachable at resume time.
@@ -547,35 +578,8 @@ def _finalize_exception(email: dict, subject: str, final_status: str,
         "EXC-" + datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:20]
     )
 
-    import redis_store
-    record = {
-        "key":            key,
-        "invoice_number": inv_num,
-        "vendor_name":    invoice_data.get("vendor_name", ""),
-        "po_number":      po_number,
-        "subject":        subject,
-        "final_status":   final_status,
-        "reasons":        reasons,
-        "recorded_at":    datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-    }
-    try:
-        redis_store.exception_add(key, record)
-        # Also store under invoice_detail so the same rich detail page
-        # (/dashboard/invoice/{key}) works for exceptions too.
-        redis_store.invoice_detail_set(key, {
-            "invoice_data":  invoice_data,
-            "po_data":       {},
-            "grn_data":      {},
-            "matching":      {},
-            "decision_info": {"reasons": reasons},
-            "final_status":  final_status,
-            "reviewer_info": {},
-            "summary":       reasons[0] if reasons else "This submission could not be processed.",
-            "variance_threshold": VARIANCE_THRESHOLD,
-            "recorded_at":   record["recorded_at"],
-        })
-    except Exception as e:
-        print(f"  ⚠️  Could not persist exception record to Redis: {e}")
+    _persist_exception_record(invoice_data, final_status, reasons, po_number=po_number,
+                              subject=subject, key=key)
 
     return {
         "invoice_number": inv_num,
@@ -1119,3 +1123,161 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+# ── SAP reflection helpers ────────────────────────────────────────────────────
+
+def _persist_exception_record(invoice_data: dict, final_status: str, reasons: list,
+                              po_number: str = "", subject: str = "", key: str = None,
+                              po_data: dict = None, grn_data: dict = None,
+                              summary: str = None) -> None:
+    """Exceptions-page record + invoice detail for a submission that could
+    not complete (shared by _finalize_exception and the missing-PO/GRN
+    path of process_invoice_set)."""
+    import redis_store
+    inv_num = invoice_data.get("invoice_number") or "unknown"
+    key = key or (inv_num if inv_num != "unknown"
+                  else "EXC-" + datetime.now().strftime("%Y%m%d_%H%M%S_%f")[:20])
+    recorded = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        redis_store.exception_add(key, {
+            "key":            key,
+            "invoice_number": inv_num,
+            "vendor_name":    invoice_data.get("vendor_name", ""),
+            "po_number":      po_number,
+            "subject":        subject,
+            "final_status":   final_status,
+            "reasons":        reasons,
+            "recorded_at":    recorded,
+        })
+        # Also store under invoice_detail so the same rich detail page
+        # (/dashboard/invoice/{key}) works for exceptions too.
+        redis_store.invoice_detail_set(key, {
+            "invoice_data":  invoice_data,
+            "po_data":       po_data or {},
+            "grn_data":      grn_data or {},
+            "matching":      {},
+            "decision_info": {"reasons": reasons},
+            "final_status":  final_status,
+            "reviewer_info": {},
+            "summary":       summary or (reasons[0] if reasons else
+                                         "This submission could not be processed."),
+            "variance_threshold": VARIANCE_THRESHOLD,
+            "recorded_at":   recorded,
+        })
+    except Exception as e:
+        print(f"  ⚠️  Could not persist exception record to Redis: {e}")
+
+
+def _sap_sync_decision(invoice_data: dict, po_data: dict, decision_info: dict,
+                       dup_check: dict) -> None:
+    """
+    Make the agent's decision visible in SAP (no-op unless
+    AP_ERP_SOURCE=sap and SAP_INVOICE_MODE is post/simulate):
+
+      Perfect Match -> post the supplier invoice. If SAP itself refuses
+                       it, the invoice is routed to Manual Review with
+                       SAP's message and parked instead.
+      Manual Review -> park the invoice in SAP so AP sees it in MIR4.
+      Duplicate     -> nothing is created in SAP.
+
+    The outcome is stored as decision_info["sap_posting"] so it travels
+    with the pending review, the result email and the dashboard detail.
+    """
+    import sap_invoice
+    if not sap_invoice.enabled() or not po_data.get("po_number"):
+        return
+    po_number = po_data["po_number"]
+    print("\n" + "=" * 55)
+    print(f"  SAP INVOICE ({sap_invoice.invoice_mode().upper()} mode)")
+    print("=" * 55)
+
+    if dup_check.get("is_duplicate"):
+        decision_info["sap_posting"] = sap_invoice._result(
+            "Skipped", messages=["Duplicate invoice — nothing created in SAP"])
+        print("  ⏭  Duplicate — not created in SAP")
+        return
+
+    if decision_info.get("decision") == "Perfect Match":
+        res = sap_invoice.create_invoice(invoice_data, po_number, park=False,
+                                         header_text="AP Agent auto-post")
+        if res["action"] in ("Posted", "Simulated"):
+            decision_info["sap_posting"] = res
+            print(f"  ✅ SAP: {res['action']} {res.get('document', '')} "
+                  f"{('payment block ' + res['payment_block']) if res.get('payment_block') else ''}")
+            return
+        print(f"  ❌ SAP refused the posting: {res['error']}")
+        decision_info["decision"] = "Manual Review"
+        decision_info["review_required"] = True
+        decision_info.setdefault("reasons", []).append(f"SAP Posting Failed — {res['error']}")
+
+    if decision_info.get("review_required"):
+        res = sap_invoice.create_invoice(invoice_data, po_number, park=True,
+                                         header_text="AP Agent review")
+        decision_info["sap_posting"] = res
+        print(f"  {'🅿️ ' if res['action'] == 'Parked' else '⚠️ '} SAP: {res['action']} "
+              f"{res.get('document', '')} {res.get('error', '')}")
+
+
+def _sap_apply_review(invoice_data: dict, po_data: dict, decision_info: dict,
+                      final_status: str, is_duplicate: bool) -> None:
+    """Carry a reviewer's decision into SAP: Approve posts the parked
+    invoice (or posts fresh if nothing was parked), Reject deletes the
+    parked invoice, Clarification leaves it parked."""
+    import sap_invoice
+    if not sap_invoice.enabled():
+        return
+    current = decision_info.get("sap_posting") or {}
+    parked = current.get("action") == "Parked" and current.get("document")
+
+    if final_status == "Approved by Reviewer":
+        if is_duplicate:
+            res = sap_invoice._result("Skipped", messages=[
+                "Approved, but this is a duplicate of an invoice already processed — "
+                "not posted to SAP again"])
+        elif parked:
+            res = sap_invoice.post_parked(current["document"], current["fiscal_year"])
+        else:
+            res = sap_invoice.create_invoice(invoice_data, po_data.get("po_number", ""),
+                                             park=False, header_text="AP Agent approved")
+    elif final_status == "Rejected by Reviewer" and parked:
+        res = sap_invoice.delete_parked(current["document"], current["fiscal_year"])
+    else:
+        return
+
+    if current:
+        decision_info.setdefault("sap_history", []).append(current)
+    decision_info["sap_posting"] = res
+    print(f"  🏦 SAP after review: {res['action']} {res.get('document', '')} "
+          f"{res.get('error', '')}")
+
+
+def reset_invoice(invoice_number: str) -> dict:
+    """
+    Demo reset for one invoice number: undo what the agent created in SAP
+    (reverse posted / delete parked supplier invoices carrying this
+    reference) and remove every AP-side trace — processed log, detail
+    record, exception, pending review — so it can be run again.
+    """
+    import duplicate_checker
+    import redis_store
+    import sap_invoice
+
+    out = {"invoice_number": invoice_number, "sap": [], "removed": []}
+    if sap_invoice.enabled():
+        out["sap"] = sap_invoice.undo_invoice(invoice_number)
+    if redis_store.processed_get(invoice_number):
+        duplicate_checker.remove_invoice(invoice_number)
+        out["removed"].append("processed log")
+    if redis_store.invoice_detail_get(invoice_number):
+        redis_store.invoice_detail_delete(invoice_number)
+        out["removed"].append("detail")
+    for key in redis_store.exception_keys_for_invoice(invoice_number):
+        redis_store.exception_remove(key)
+        redis_store.invoice_detail_delete(key)
+        out["removed"].append("exception")
+    for token in redis_store.pending_tokens_for_invoice(invoice_number):
+        redis_store.pending_delete(token)
+        out["removed"].append("pending review")
+    return out

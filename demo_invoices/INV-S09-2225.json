@@ -1,0 +1,34 @@
+{
+  "scenario": "S09",
+  "expected": "Manual Review",
+  "invoice_data": {
+    "invoice_number": "INV-S09-2225",
+    "vendor_name": "MedInc",
+    "invoice_date": "2026-10-14",
+    "po_number": "4500002225",
+    "currency": "USD",
+    "payment_terms": "Net 30",
+    "tax_type": "CA Sales Tax @ 6.00%",
+    "subtotal": 3400.0,
+    "tax": 204.0,
+    "freight": 650.0,
+    "discount": 0.0,
+    "total_amount": 4254.0,
+    "items": [
+      {
+        "item": "Packaging Material Box A",
+        "quantity": 1000,
+        "uom": "EA",
+        "unit_price": 2.5,
+        "amount": 2500.0
+      },
+      {
+        "item": "Bubble Wrap Roll 50m",
+        "quantity": 50,
+        "uom": "ROLL",
+        "unit_price": 18.0,
+        "amount": 900.0
+      }
+    ]
+  }
+}

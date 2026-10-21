@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Avagama — SAP Connector Guide (SAP NW RFC SDK 7.50)</title>
+<style>
+  :root{
+    --brand:#5B21B6; --brand2:#7C3AED; --ink:#1F2430; --slate:#334155;
+    --muted:#667085; --line:#E4E7EC; --bg:#F7F8FB; --card:#FFFFFF;
+    --code-bg:#0E1524; --code-fg:#E6EDF3; --ok:#0F9D58; --warn:#B7791F;
+    --danger:#C0392B; --tip:#1E7F8C; --sap:#0FAAFF;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg);line-height:1.6;}
+  .wrap{display:grid;grid-template-columns:290px 1fr;max-width:1400px;margin:0 auto;}
+  /* Sidebar */
+  aside{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--card);border-right:1px solid var(--line);padding:26px 20px;}
+  aside .brand{font-weight:800;font-size:18px;color:var(--brand);letter-spacing:.3px}
+  aside .sub{font-size:12px;color:var(--muted);margin:2px 0 18px}
+  aside nav a{display:block;color:var(--slate);text-decoration:none;font-size:13.5px;padding:6px 10px;border-radius:7px;margin:2px 0}
+  aside nav a:hover{background:#F3F0FB;color:var(--brand)}
+  aside nav .grp{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:16px 0 4px 10px}
+  /* Main */
+  main{padding:40px 54px 90px;max-width:960px}
+  header.hero{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;border-radius:16px;padding:34px 36px;margin-bottom:30px}
+  header.hero h1{margin:0 0 8px;font-size:28px;font-weight:800}
+  header.hero p{margin:0;opacity:.92;font-size:15px}
+  header.hero .pills{margin-top:16px;display:flex;gap:8px;flex-wrap:wrap}
+  .pill{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);border-radius:999px;padding:4px 12px;font-size:12px;font-weight:600}
+  h2{font-size:22px;margin:44px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--line);scroll-margin-top:20px}
+  h3{font-size:17px;margin:26px 0 8px;color:var(--slate)}
+  h4{font-size:14px;margin:18px 0 6px;color:var(--brand);text-transform:uppercase;letter-spacing:.04em}
+  p,li{font-size:14.5px}
+  code{background:#EEF0F5;color:#B4325A;padding:1.5px 6px;border-radius:5px;font-family:"Cascadia Code",Consolas,Menlo,monospace;font-size:13px}
+  pre{background:var(--code-bg);color:var(--code-fg);border-radius:12px;padding:18px 20px;overflow-x:auto;font-family:"Cascadia Code",Consolas,Menlo,monospace;font-size:13px;line-height:1.55;border:1px solid #1E2A44}
+  pre code{background:none;color:inherit;padding:0}
+  .tok-c{color:#7D8FB3}   /* comment */
+  .tok-k{color:#C792EA}   /* keyword */
+  .tok-s{color:#C3E88D}   /* string */
+  .tok-f{color:#82AAFF}   /* function */
+  .tok-n{color:#F78C6C}   /* number/const */
+  table{border-collapse:collapse;width:100%;margin:14px 0;font-size:13.5px}
+  th,td{border:1px solid var(--line);padding:9px 12px;text-align:left;vertical-align:top}
+  th{background:#F1ECFA;color:var(--slate);font-weight:700}
+  tr:nth-child(even) td{background:#FAFAFC}
+  .callout{border-radius:12px;padding:14px 18px;margin:16px 0;border:1px solid;font-size:14px}
+  .callout .t{font-weight:700;display:block;margin-bottom:3px}
+  .c-tip{background:#E9F7F9;border-color:#BFE7ED;color:#0c5560}
+  .c-warn{background:#FDF6E7;border-color:#F0DCA8;color:#7a5a12}
+  .c-danger{background:#FDECEA;border-color:#F5C4BE;color:#8f2820}
+  .c-ok{background:#EAF7EF;border-color:#BEE6CD;color:#0c6b3a}
+  .step{display:flex;gap:14px;margin:14px 0;align-items:flex-start}
+  .step .n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--brand);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14px}
+  .step .b{flex:1}
+  .diagram{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;overflow-x:auto;margin:18px 0}
+  .diagram pre{background:none;color:var(--slate);border:none;padding:0;font-size:12.5px;white-space:pre}
+  .filetag{display:inline-block;background:#0E1524;color:#9DE0AD;font-family:Consolas,monospace;font-size:12px;padding:2px 9px;border-radius:6px;margin-bottom:-6px;position:relative;top:2px}
+  .kbd{background:#fff;border:1px solid #cfd4dc;border-bottom-width:2px;border-radius:6px;padding:1px 7px;font-size:12px;font-family:Consolas,monospace}
+  a.inline{color:var(--brand);font-weight:600}
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+  @media (max-width:900px){.wrap{grid-template-columns:1fr}aside{display:none}main{padding:24px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside>
+    <div class="brand">Avagama · SAP Connector</div>
+    <div class="sub">Wiring SAP RFC/BAPI into standalone agents</div>
+    <nav>
+      <div class="grp">Understand</div>
+      <a href="#what">1. What's in the ZIP</a>
+      <a href="#how">2. How it fits Avagama</a>
+      <a href="#arch">3. Architecture</a>
+      <div class="grp">Install</div>
+      <a href="#sdk">4. Install the RFC SDK</a>
+      <a href="#noderfc">5. Install node-rfc</a>
+      <a href="#verify">6. Verify the binding</a>
+      <div class="grp">Build the connector</div>
+      <a href="#adapter">7. The adapter file</a>
+      <a href="#register">8. Register the adapter</a>
+      <a href="#toolrecord">9. Create the tool record</a>
+      <a href="#test">10. Test end-to-end</a>
+      <div class="grp">Ship &amp; secure</div>
+      <a href="#deploy">11. Deployment notes</a>
+      <a href="#security">12. Security &amp; licensing</a>
+      <a href="#trouble">13. Troubleshooting</a>
+      <div class="grp">This machine</div>
+      <a href="#setuplog">14. Setup verification log</a>
+      <a href="#implemented">15. Connector implemented ✓</a>
+    </nav>
+  </aside>
+
+  <main>
+    <header class="hero">
+      <h1>Adding an SAP Connector to Avagama</h1>
+      <p>A step-by-step guide to connect standalone agents to an SAP system using the <strong>SAP NetWeaver RFC SDK 7.50</strong> (the <code>nwrfc750P_17</code> package you downloaded) via the <code>node-rfc</code> binding — plumbed into the existing tool-adapter framework.</p>
+      <div class="pills">
+        <span class="pill">SAP NW RFC SDK 7.50 · patch 17</span>
+        <span class="pill">Windows x64</span>
+        <span class="pill">node-rfc</span>
+        <span class="pill">Multi-function tool adapter</span>
+      </div>
+    </header>
+
+    <!-- 1 -->
+    <h2 id="what">1. What's actually inside <code>nwrfc750P_17-70002755.zip</code></h2>
+    <p>This is the <strong>SAP NetWeaver RFC SDK 7.50, patch level 17, Windows 64-bit</strong>. It is a native C/C++ library — <em>not</em> something Node.js can call directly. It's the low-level engine that language bindings (like <code>node-rfc</code>) load to talk to SAP over the RFC protocol. Contents after extraction (folder <code>nwrfcsdk/</code>):</p>
+    <table>
+      <tr><th>Folder</th><th>Key files</th><th>What it's for</th></tr>
+      <tr><td><code>lib/</code></td><td><code>sapnwrfc.dll</code> (8&nbsp;MB), <code>libsapucum.dll</code>, <code>icudt57.dll</code>, <code>icuin57.dll</code>, <code>icuuc57.dll</code>, <code>*.lib</code></td><td><strong>The runtime.</strong> These DLLs must be found on the OS load path at runtime. The ICU DLLs handle Unicode; <code>sapnwrfc.dll</code> is the RFC engine.</td></tr>
+      <tr><td><code>include/</code></td><td><code>sapnwrfc.h</code>, <code>sapdecf.h</code>, <code>sapucrfc.h</code></td><td>C headers. Needed only when <code>node-rfc</code> compiles from source (no prebuilt binary for your Node version).</td></tr>
+      <tr><td><code>bin/</code></td><td><code>rfcexec.exe</code>, <code>startrfc.exe</code></td><td>Standalone RFC utilities (not needed by the Node connector).</td></tr>
+      <tr><td><code>demo/</code></td><td><code>sapnwrfc.ini</code>, <code>sflightClient.c</code>, others</td><td>C samples. <code>sapnwrfc.ini</code> is a useful reference for every logon parameter.</td></tr>
+      <tr><td><code>doc/</code></td><td><code>licenses.txt</code>, <code>release_notes.txt</code></td><td>License terms + changelog (confirms 7.50.17).</td></tr>
+    </table>
+    <div class="callout c-warn"><span class="t">⚠ Platform lock</span>This ZIP is the <strong>Windows x64</strong> SDK. It works on your Windows EC2 host. If you ever run the backend on <strong>Linux</strong> (e.g. the Docker/alpine path), those <code>.dll</code>s are useless — you must download the matching <em>Linux</em> SDK (<code>nwrfc750P_x-70002752.zip</code> for Linux x86_64) from the SAP Support Portal instead. The connector code stays identical; only the native SDK differs.</div>
+
+    <!-- 2 -->
+    <h2 id="how">2. How this fits into Avagama</h2>
+    <p>Your standalone agents already have a clean, pluggable connector system in <code>services/standaloneAgents/toolAdapters/</code> (Slack, Gmail, Google/Outlook Calendar, Outlook Mail, web search). Each connector is a small adapter module that the tool executor turns into LLM-callable functions. <strong>Adding SAP = adding one more adapter</strong> of exactly the same shape — no changes to the chat loop, the LLM plumbing, or the tool registry contract.</p>
+    <p>We'll build a <strong>multi-function adapter</strong> (like the calendar adapters) exposing three functions the LLM can call:</p>
+    <table>
+      <tr><th>LLM function</th><th>What it does</th><th>Underlying RFC</th></tr>
+      <tr><td><code>sap_ping</code></td><td>Test the SAP connection, return system info</td><td><code>RFC_PING</code></td></tr>
+      <tr><td><code>sap_call_function</code></td><td>Call a <strong>whitelisted</strong> BAPI / function module with parameters</td><td>Any allowed RFM, e.g. <code>BAPI_MATERIAL_GET_DETAIL</code></td></tr>
+      <tr><td><code>sap_read_table</code></td><td>Read rows from an SAP table (fields + WHERE, row-capped)</td><td><code>RFC_READ_TABLE</code></td></tr>
+    </table>
+    <div class="callout c-tip"><span class="t">Design stance: read-first &amp; whitelisted</span>An LLM deciding which SAP function to call is powerful and risky. This connector is <strong>read-oriented and whitelisted by default</strong> — <code>sap_call_function</code> refuses any RFM not explicitly listed in the tool's <code>allowed_functions</code>. Add write BAPIs (and <code>BAPI_TRANSACTION_COMMIT</code>) only deliberately, per agent.</div>
+
+    <!-- 3 -->
+    <h2 id="arch">3. Architecture at a glance</h2>
+    <div class="diagram"><pre>
+  User ↔ Standalone Agent (chat)
+        │  LLM emits a tool_call:  { name:"sap_read_table", arguments:{...} }
+        ▼
+  toolExecutorService.dispatchToolCall()          services/standaloneAgents/toolExecutorService.js
+        │  resolves name → adapter + StandaloneTool record
+        ▼
+  sapRfc.js  adapter  (matches: name contains "sap")   ← NEW FILE
+        │  builds connection params from tool.config.extras
+        │  decrypts SAP password via utils/tokenCipher
+        ▼
+  node-rfc  (npm)  ──loads──►  sapnwrfc.dll  +  icu*.dll     (SAP NW RFC SDK)
+        │  RFC protocol over TCP  (sysnr → gateway port 33&lt;nn&gt;)
+        ▼
+  ╔══════════════════════╗
+  ║   SAP S/4HANA / ECC  ║   BAPIs · function modules · tables
+  ╚══════════════════════╝
+    </pre></div>
+    <p>Everything above <code>node-rfc</code> is your JavaScript. Everything from <code>node-rfc</code> down is the native SDK from the ZIP. The two are connected purely by <strong>environment variables</strong> that tell <code>node-rfc</code> where the DLLs live.</p>
+
+    <!-- 4 -->
+    <h2 id="sdk">4. Install the SAP NW RFC SDK (the ZIP)</h2>
+    <p>The SDK isn't "installed" like an MSI — you just place the folder somewhere stable and point two environment variables at it.</p>
+    <div class="step"><div class="n">1</div><div class="b"><strong>Extract</strong> the ZIP to a fixed, permanent location (avoid spaces in the path):
+      <pre><span class="tok-c"># Windows — extract nwrfcsdk\ to:</span>
+C:\nwrfcsdk
+<span class="tok-c"># so you have  C:\nwrfcsdk\lib\sapnwrfc.dll  etc.</span></pre>
+    </div></div>
+    <div class="step"><div class="n">2</div><div class="b"><strong>Set <code>SAPNWRFC_HOME</code></strong> and add the <code>lib</code> folder to <code>PATH</code> so Windows can load the DLLs at runtime:
+      <pre><span class="tok-c"># PowerShell (run as the user/service account that runs Node), persistent:</span>
+[Environment]::SetEnvironmentVariable(<span class="tok-s">"SAPNWRFC_HOME"</span>, <span class="tok-s">"C:\nwrfcsdk"</span>, <span class="tok-s">"Machine"</span>)
+$p = [Environment]::GetEnvironmentVariable(<span class="tok-s">"Path"</span>,<span class="tok-s">"Machine"</span>)
+[Environment]::SetEnvironmentVariable(<span class="tok-s">"Path"</span>, $p + <span class="tok-s">";C:\nwrfcsdk\lib"</span>, <span class="tok-s">"Machine"</span>)</pre>
+    </div></div>
+    <div class="step"><div class="n">3</div><div class="b"><strong>Install the Visual C++ runtime</strong> the SDK was built with. SAP NW RFC SDK 7.50 requires the <strong>Microsoft Visual C++ 2013 Redistributable (x64)</strong> present on the host (see SAP Note 2573790). Without it, loading <code>sapnwrfc.dll</code> fails with a cryptic "module not found".</div></div>
+    <div class="callout c-warn"><span class="t">⚠ Restart shells after setting env vars</span>A running PM2 process will <strong>not</strong> see the new <code>SAPNWRFC_HOME</code>/<code>PATH</code> until it's restarted with a fresh environment: <code>pm2 restart avagama-backend --update-env</code> (or fully stop/start). This is the #1 cause of "it works in my terminal but not in the app".</div>
+
+    <!-- 5 -->
+    <h2 id="noderfc">5. Install the <code>node-rfc</code> binding</h2>
+    <p><code>node-rfc</code> is the npm package that bridges Node.js and the SDK. It ships prebuilt binaries for common Node/OS combinations; if none matches your Node version it compiles from source (needs the C++ build toolchain + the headers from <code>include/</code>, which is why <code>SAPNWRFC_HOME</code> must be set <em>before</em> install).</p>
+    <pre><span class="tok-c"># from the backend project root, with SAPNWRFC_HOME already set:</span>
+npm install node-rfc</pre>
+    <div class="callout c-tip"><span class="t">If it builds from source</span>You'll also need <span class="kbd">Python 3</span> and <strong>Visual Studio Build Tools</strong> (Desktop C++ workload) so <code>node-gyp</code> can compile. Prebuilt binaries avoid all of this — pin a Node LTS that <code>node-rfc</code> publishes binaries for to keep installs painless.</div>
+
+    <!-- 6 -->
+    <h2 id="verify">6. Verify the binding before touching Avagama</h2>
+    <p>Prove the SDK + <code>node-rfc</code> + your SAP credentials work in isolation. Create a throwaway <code>scripts/sapSmokeTest.js</code>:</p>
+    <span class="filetag">scripts/sapSmokeTest.js</span>
+    <pre><span class="tok-k">const</span> { Client } = <span class="tok-f">require</span>(<span class="tok-s">"node-rfc"</span>);
+
+<span class="tok-k">const</span> params = {
+  user:   <span class="tok-s">"RFC_SVC_USER"</span>,
+  passwd: process.env.SAP_TEST_PASSWD,   <span class="tok-c">// don't hardcode</span>
+  ashost: <span class="tok-s">"10.0.0.12"</span>,   <span class="tok-c">// SAP app server host/IP</span>
+  sysnr:  <span class="tok-s">"00"</span>,          <span class="tok-c">// system number → gateway port 3300</span>
+  client: <span class="tok-s">"100"</span>,
+  lang:   <span class="tok-s">"EN"</span>
+};
+
+(<span class="tok-k">async</span> () => {
+  <span class="tok-k">const</span> client = <span class="tok-k">new</span> <span class="tok-f">Client</span>(params);
+  <span class="tok-k">await</span> client.<span class="tok-f">open</span>();
+  console.<span class="tok-f">log</span>(<span class="tok-s">"connected:"</span>, client.connectionInfo.sysId, client.connectionInfo.client);
+  <span class="tok-k">await</span> client.<span class="tok-f">call</span>(<span class="tok-s">"RFC_PING"</span>, {});
+  console.<span class="tok-f">log</span>(<span class="tok-s">"RFC_PING ok"</span>);
+  <span class="tok-k">await</span> client.<span class="tok-f">close</span>();
+})().<span class="tok-f">catch</span>(e => { console.<span class="tok-f">error</span>(<span class="tok-s">"SAP FAIL:"</span>, e.message, e.key || <span class="tok-s">""</span>); process.<span class="tok-f">exit</span>(1); });</pre>
+    <pre>SAP_TEST_PASSWD=•••• node scripts/sapSmokeTest.js</pre>
+    <p>Expected: <code>connected: &lt;SID&gt; 100</code> then <code>RFC_PING ok</code>. If this fails, fix it here — it's an infrastructure/credentials issue, not an Avagama one. See <a class="inline" href="#trouble">§13</a>.</p>
+
+    <!-- 7 -->
+    <h2 id="adapter">7. Create the adapter file</h2>
+    <p>This is the whole connector. Drop it in <code>services/standaloneAgents/toolAdapters/sapRfc.js</code>. It follows the exact <strong>multi-function shape</strong> (<code>matches</code> + <code>getLlmFunctions</code>) used by the calendar/mail adapters, decrypts the SAP password with your existing <code>tokenCipher</code>, and enforces the whitelist + row caps.</p>
+    <span class="filetag">services/standaloneAgents/toolAdapters/sapRfc.js</span>
+    <pre><span class="tok-c">/**
+ * SAP RFC/BAPI tool adapter — multi-function shape.
+ * Requires: SAP NW RFC SDK on the host (SAPNWRFC_HOME + lib on PATH) and `npm i node-rfc`.
+ *
+ * StandaloneTool record shape:
+ *   type: "builtin"
+ *   name: contains "sap"          (e.g. "SAP ERP")
+ *   config.extras: {
+ *     ashost, sysnr, client, lang,            // direct app server  (OR ...)
+ *     mshost, msserv, group, sysid,           // ...message-server / load balancing
+ *     user,
+ *     passwd_enc,                             // AES-256-GCM blob from tokenCipher.encrypt()
+ *     allowed_functions: ["BAPI_MATERIAL_GET_DETAIL", ...],  // whitelist for sap_call_function
+ *     allow_read_table: true,                 // gate RFC_READ_TABLE (default true)
+ *     max_rows: 100
+ *   }
+ */</span>
+<span class="tok-k">let</span> rfc = <span class="tok-k">null</span>;
+<span class="tok-k">try</span> { rfc = <span class="tok-f">require</span>(<span class="tok-s">"node-rfc"</span>); } <span class="tok-k">catch</span> (_) { <span class="tok-c">/* surfaced at call time with a clear message */</span> }
+<span class="tok-k">const</span> { decrypt } = <span class="tok-f">require</span>(<span class="tok-s">"../../../utils/tokenCipher"</span>);
+<span class="tok-k">const</span> logger = <span class="tok-f">require</span>(<span class="tok-s">"../../../utils/logger"</span>);
+
+<span class="tok-k">function</span> <span class="tok-f">matches</span>(tool) {
+  <span class="tok-k">if</span> (!tool) <span class="tok-k">return</span> <span class="tok-k">false</span>;
+  <span class="tok-k">const</span> name = (tool.name || <span class="tok-s">""</span>).<span class="tok-f">toLowerCase</span>();
+  <span class="tok-k">if</span> (!name.<span class="tok-f">includes</span>(<span class="tok-s">"sap"</span>)) <span class="tok-k">return</span> <span class="tok-k">false</span>;
+  <span class="tok-k">return</span> tool.type === <span class="tok-s">"builtin"</span> || tool.type === <span class="tok-s">"webhook"</span>;
+}
+
+<span class="tok-k">function</span> <span class="tok-f">_connParams</span>(tool) {
+  <span class="tok-k">const</span> x = tool?.config?.extras || {};
+  <span class="tok-k">if</span> (!x.user || (!x.ashost && !x.mshost))
+    <span class="tok-k">throw</span> <span class="tok-k">new</span> <span class="tok-f">Error</span>(<span class="tok-s">"SAP tool not configured: need user + ashost (or mshost) in config.extras"</span>);
+  <span class="tok-k">let</span> passwd = x.passwd || <span class="tok-s">""</span>;
+  <span class="tok-k">if</span> (x.passwd_enc) { <span class="tok-k">try</span> { passwd = <span class="tok-f">decrypt</span>(x.passwd_enc); } <span class="tok-k">catch</span> (e) { <span class="tok-k">throw</span> <span class="tok-k">new</span> <span class="tok-f">Error</span>(<span class="tok-s">"SAP password decrypt failed"</span>); } }
+  <span class="tok-k">const</span> base = { user: x.user, passwd, client: x.client || <span class="tok-s">"100"</span>, lang: x.lang || <span class="tok-s">"EN"</span> };
+  <span class="tok-k">if</span> (x.mshost) <span class="tok-k">return</span> { ...base, mshost: x.mshost, msserv: x.msserv, group: x.group || <span class="tok-s">"PUBLIC"</span>, sysid: x.sysid };
+  <span class="tok-k">return</span> { ...base, ashost: x.ashost, sysnr: x.sysnr || <span class="tok-s">"00"</span> };
+}
+
+<span class="tok-k">async</span> <span class="tok-k">function</span> <span class="tok-f">_withClient</span>(tool, fn) {
+  <span class="tok-k">if</span> (!rfc) <span class="tok-k">throw</span> <span class="tok-k">new</span> <span class="tok-f">Error</span>(<span class="tok-s">"node-rfc not installed / SAP NW RFC SDK not found. See SAP connector guide."</span>);
+  <span class="tok-k">const</span> client = <span class="tok-k">new</span> rfc.<span class="tok-f">Client</span>(<span class="tok-f">_connParams</span>(tool));
+  <span class="tok-k">await</span> client.<span class="tok-f">open</span>();
+  <span class="tok-k">try</span> { <span class="tok-k">return</span> <span class="tok-k">await</span> <span class="tok-f">fn</span>(client); }
+  <span class="tok-k">finally</span> { <span class="tok-k">try</span> { <span class="tok-k">await</span> client.<span class="tok-f">close</span>(); } <span class="tok-k">catch</span> (_) {} }
+}
+
+<span class="tok-c">// 1 ── Ping / connection test</span>
+<span class="tok-k">async</span> <span class="tok-k">function</span> <span class="tok-f">sapPing</span>(tool) {
+  <span class="tok-k">return</span> <span class="tok-f">_withClient</span>(tool, <span class="tok-k">async</span> (c) => {
+    <span class="tok-k">await</span> c.<span class="tok-f">call</span>(<span class="tok-s">"RFC_PING"</span>, {});
+    <span class="tok-k">const</span> i = c.connectionInfo || {};
+    <span class="tok-k">return</span> { ok: <span class="tok-k">true</span>, connected: <span class="tok-k">true</span>, sysid: i.sysId, client: i.client, host: i.host, release: i.rfcRole };
+  });
+}
+
+<span class="tok-c">// 2 ── Call a whitelisted function module / BAPI</span>
+<span class="tok-k">async</span> <span class="tok-k">function</span> <span class="tok-f">sapCallFunction</span>(tool, args) {
+  <span class="tok-k">const</span> x = tool?.config?.extras || {};
+  <span class="tok-k">const</span> allowed = (Array.<span class="tok-f">isArray</span>(x.allowed_functions) ? x.allowed_functions : []).<span class="tok-f">map</span>(s => <span class="tok-f">String</span>(s).<span class="tok-f">toUpperCase</span>());
+  <span class="tok-k">const</span> fm = <span class="tok-f">String</span>(args.function_name || <span class="tok-s">""</span>).<span class="tok-f">toUpperCase</span>();
+  <span class="tok-k">if</span> (!fm) <span class="tok-k">throw</span> <span class="tok-k">new</span> <span class="tok-f">Error</span>(<span class="tok-s">"function_name is required"</span>);
+  <span class="tok-k">if</span> (!allowed.<span class="tok-f">includes</span>(fm)) <span class="tok-k">throw</span> <span class="tok-k">new</span> <span class="tok-f">Error</span>(<span class="tok-s">`Function '${fm}' is not in this tool's allowed_functions whitelist`</span>);
+  <span class="tok-k">const</span> params = (args.parameters && <span class="tok-k">typeof</span> args.parameters === <span class="tok-s">"object"</span>) ? args.parameters : {};
+  <span class="tok-k">return</span> <span class="tok-f">_withClient</span>(tool, <span class="tok-k">async</span> (c) => ({ ok: <span class="tok-k">true</span>, function: fm, result: <span class="tok-k">await</span> c.<span class="tok-f">call</span>(fm, params) }));
+}
+
+<span class="tok-c">// 3 ── Read a table via RFC_READ_TABLE (gated + row-capped)</span>
+<span class="tok-k">async</span> <span class="tok-k">function</span> <span class="tok-f">sapReadTable</span>(tool, args) {
+  <span class="tok-k">const</span> x = tool?.config?.extras || {};
+  <span class="tok-k">if</span> (x.allow_read_table === <span class="tok-k">false</span>) <span class="tok-k">throw</span> <span class="tok-k">new</span> <span class="tok-f">Error</span>(<span class="tok-s">"RFC_READ_TABLE is disabled for this tool"</span>);
+  <span class="tok-k">const</span> table = <span class="tok-f">String</span>(args.table || <span class="tok-s">""</span>).<span class="tok-f">toUpperCase</span>();
+  <span class="tok-k">if</span> (!table) <span class="tok-k">throw</span> <span class="tok-k">new</span> <span class="tok-f">Error</span>(<span class="tok-s">"table is required"</span>);
+  <span class="tok-k">const</span> fields = Array.<span class="tok-f">isArray</span>(args.fields) ? args.fields.<span class="tok-f">filter</span>(<span class="tok-k">Boolean</span>) : [];
+  <span class="tok-k">const</span> where  = Array.<span class="tok-f">isArray</span>(args.where) ? args.where : (args.where ? [<span class="tok-f">String</span>(args.where)] : []);
+  <span class="tok-k">const</span> cap    = <span class="tok-f">parseInt</span>(x.max_rows) || <span class="tok-n">100</span>;
+  <span class="tok-k">const</span> rowcount = Math.<span class="tok-f">min</span>(<span class="tok-f">parseInt</span>(args.max_rows) || <span class="tok-n">50</span>, cap);
+  <span class="tok-k">const</span> D = <span class="tok-s">"|"</span>;
+  <span class="tok-k">return</span> <span class="tok-f">_withClient</span>(tool, <span class="tok-k">async</span> (c) => {
+    <span class="tok-k">const</span> res = <span class="tok-k">await</span> c.<span class="tok-f">call</span>(<span class="tok-s">"RFC_READ_TABLE"</span>, {
+      QUERY_TABLE: table,
+      DELIMITER:   D,
+      FIELDS:      fields.<span class="tok-f">map</span>(f => ({ FIELDNAME: <span class="tok-f">String</span>(f).<span class="tok-f">toUpperCase</span>() })),
+      OPTIONS:     where.<span class="tok-f">map</span>(w => ({ TEXT: <span class="tok-f">String</span>(w) })),
+      ROWCOUNT:    rowcount
+    });
+    <span class="tok-k">const</span> cols = (res.FIELDS || []).<span class="tok-f">map</span>(f => f.FIELDNAME);
+    <span class="tok-k">const</span> rows = (res.DATA || []).<span class="tok-f">map</span>(d => {
+      <span class="tok-k">const</span> parts = <span class="tok-f">String</span>(d.WA).<span class="tok-f">split</span>(D);
+      <span class="tok-k">const</span> o = {}; cols.<span class="tok-f">forEach</span>((cn, i) => { o[cn] = (parts[i] || <span class="tok-s">""</span>).<span class="tok-f">trim</span>(); }); <span class="tok-k">return</span> o;
+    });
+    <span class="tok-k">return</span> { ok: <span class="tok-k">true</span>, table, count: rows.length, columns: cols, rows };
+  });
+}
+
+<span class="tok-c">// ── Multi-function descriptors the LLM sees ──</span>
+<span class="tok-k">function</span> <span class="tok-f">getLlmFunctions</span>(tool) {
+  <span class="tok-k">const</span> x = tool?.config?.extras || {};
+  <span class="tok-k">const</span> allowed = Array.<span class="tok-f">isArray</span>(x.allowed_functions) ? x.allowed_functions : [];
+  <span class="tok-k">const</span> fns = [
+    { name: <span class="tok-s">"sap_ping"</span>,
+      description: <span class="tok-s">"Test connectivity to the SAP system and return system info (sysid, client, host). Use to verify the SAP connection is alive."</span>,
+      parameters: { type: <span class="tok-s">"object"</span>, properties: {} },
+      execute: sapPing },
+    { name: <span class="tok-s">"sap_call_function"</span>,
+      description: <span class="tok-s">"Call a specific SAP function module / BAPI by name and return its result. Only whitelisted function modules are permitted"</span> +
+        (allowed.length ? <span class="tok-s">` (allowed: ${allowed.<span class="tok-f">join</span>(", ")})`</span> : <span class="tok-s">""</span>) +
+        <span class="tok-s">". Use to read SAP business data via the appropriate BAPI (e.g. material, customer, sales-order details)."</span>,
+      parameters: { type: <span class="tok-s">"object"</span>, required: [<span class="tok-s">"function_name"</span>], properties: {
+        function_name: { type: <span class="tok-s">"string"</span>, description: <span class="tok-s">"SAP function module / BAPI, e.g. BAPI_MATERIAL_GET_DETAIL"</span> },
+        parameters:    { type: <span class="tok-s">"object"</span>, description: <span class="tok-s">"Import/table parameters as a JSON object matching the RFM signature."</span> }
+      } },
+      execute: sapCallFunction }
+  ];
+  <span class="tok-k">if</span> (x.allow_read_table !== <span class="tok-k">false</span>) fns.<span class="tok-f">push</span>({
+    name: <span class="tok-s">"sap_read_table"</span>,
+    description: <span class="tok-s">"Read rows from an SAP table (RFC_READ_TABLE). Use when the user asks for records from a known table. Row-capped."</span>,
+    parameters: { type: <span class="tok-s">"object"</span>, required: [<span class="tok-s">"table"</span>], properties: {
+      table:    { type: <span class="tok-s">"string"</span>, description: <span class="tok-s">"SAP table name, e.g. MARA, KNA1, VBAK"</span> },
+      fields:   { type: <span class="tok-s">"array"</span>, items: { type: <span class="tok-s">"string"</span> }, description: <span class="tok-s">"Columns to return. Fewer/narrower fields avoid the 512-char row limit."</span> },
+      where:    { type: <span class="tok-s">"array"</span>, items: { type: <span class="tok-s">"string"</span> }, description: <span class="tok-s">"WHERE clauses in ABAP SQL, e.g. [\"MTART = 'FERT'\"]."</span> },
+      max_rows: { type: <span class="tok-s">"integer"</span>, description: <span class="tok-s">"Max rows (capped by tool config)."</span> }
+    } },
+    execute: sapReadTable
+  });
+  <span class="tok-k">return</span> fns;
+}
+
+module.exports = { matches, getLlmFunctions };</pre>
+
+    <!-- 8 -->
+    <h2 id="register">8. Register the adapter (one line)</h2>
+    <p>Open <code>services/standaloneAgents/toolExecutorService.js</code> and add the require + the array entry. Because it's a multi-function adapter, it goes straight into <code>ADAPTERS</code> as-is (the executor auto-detects the shape).</p>
+    <span class="filetag">services/standaloneAgents/toolExecutorService.js</span>
+    <pre><span class="tok-c">// near the other requires</span>
+<span class="tok-k">const</span> sapRfcAdapter = <span class="tok-f">require</span>(<span class="tok-s">"./toolAdapters/sapRfc"</span>);
+
+<span class="tok-k">const</span> ADAPTERS = [
+  googleCalendarAdapter,
+  gmailAdapter,
+  outlookCalendarAdapter,
+  outlookMailAdapter,
+  sapRfcAdapter,          <span class="tok-c">// ← add this line</span>
+  { <span class="tok-c">/* slack single-function entry (unchanged) */</span> }
+];</pre>
+    <div class="callout c-ok"><span class="t">That's the entire wiring.</span>No changes to <code>standaloneChatService.js</code>, the LLM loop, or the tool schema builder — <code>buildLlmToolsArray()</code> will now emit <code>sap_ping</code>, <code>sap_call_function</code>, and (optionally) <code>sap_read_table</code> for any agent that has an enabled tool whose name contains "sap".</div>
+
+    <!-- 9 -->
+    <h2 id="toolrecord">9. Create the SAP tool record (with encrypted password)</h2>
+    <p>A connector becomes usable by an agent when there's a <code>StandaloneTool</code> record attached to it. Store the SAP password <strong>encrypted</strong> (never plaintext) using the same <code>tokenCipher</code> the OAuth connectors use. One-off script:</p>
+    <span class="filetag">scripts/createSapTool.js</span>
+    <pre><span class="tok-k">require</span>(<span class="tok-s">"dotenv"</span>).<span class="tok-f">config</span>();
+<span class="tok-k">const</span> { getModel } = <span class="tok-f">require</span>(<span class="tok-s">"../models/standalone/StandaloneTool"</span>);
+<span class="tok-k">const</span> { encrypt } = <span class="tok-f">require</span>(<span class="tok-s">"../utils/tokenCipher"</span>);
+
+(<span class="tok-k">async</span> () => {
+  <span class="tok-k">const</span> Tool = <span class="tok-k">await</span> <span class="tok-f">getModel</span>();
+  <span class="tok-k">const</span> doc = <span class="tok-k">await</span> Tool.<span class="tok-f">create</span>({
+    agent_id:     <span class="tok-s">"&lt;AGENT_OBJECT_ID&gt;"</span>,
+    organization: <span class="tok-s">"&lt;ORG_OBJECT_ID&gt;"</span>,
+    created_by:   <span class="tok-s">"&lt;USER_OBJECT_ID&gt;"</span>,
+    type: <span class="tok-s">"builtin"</span>,
+    name: <span class="tok-s">"SAP ERP"</span>,               <span class="tok-c">// must contain "sap" → adapter.matches()</span>
+    description: <span class="tok-s">"Read material, customer and sales-order data from SAP."</span>,
+    enabled: <span class="tok-k">true</span>,
+    config: { extras: {
+      ashost: <span class="tok-s">"10.0.0.12"</span>, sysnr: <span class="tok-s">"00"</span>, client: <span class="tok-s">"100"</span>, lang: <span class="tok-s">"EN"</span>,
+      user:   <span class="tok-s">"RFC_SVC_USER"</span>,
+      passwd_enc: <span class="tok-f">encrypt</span>(process.env.SAP_SVC_PASSWD),   <span class="tok-c">// AES-256-GCM blob</span>
+      allowed_functions: [<span class="tok-s">"BAPI_MATERIAL_GET_DETAIL"</span>, <span class="tok-s">"BAPI_CUSTOMER_GETDETAIL2"</span>],
+      allow_read_table: <span class="tok-k">true</span>,
+      max_rows: <span class="tok-n">100</span>
+    } }
+  });
+  console.<span class="tok-f">log</span>(<span class="tok-s">"created SAP tool"</span>, doc._id.<span class="tok-f">toString</span>());
+  process.<span class="tok-f">exit</span>(0);
+})();</pre>
+    <pre>SAP_SVC_PASSWD=•••• node scripts/createSapTool.js</pre>
+    <div class="callout c-tip"><span class="t">Load balancing?</span>For a message-server (logon-group) connection instead of a fixed app server, drop <code>ashost/sysnr</code> and set <code>mshost</code>, <code>msserv</code> (the message-server port/service), <code>group</code> (e.g. <code>PUBLIC</code>), and <code>sysid</code> in <code>extras</code>. The adapter already handles both shapes.</div>
+
+    <!-- 10 -->
+    <h2 id="test">10. Test end-to-end</h2>
+    <div class="step"><div class="n">1</div><div class="b"><strong>Restart</strong> the backend so it loads the new adapter and the SAP env vars: <code>pm2 restart avagama-backend --update-env</code>.</div></div>
+    <div class="step"><div class="n">2</div><div class="b"><strong>Confirm the tools are offered.</strong> Chat with the agent; the runtime log should list the SAP functions in the tool array:
+      <pre>standaloneChat(byId): tool runtime — attached=1, usable=…, names=[…, sap_ping, sap_call_function, sap_read_table]</pre>
+    </div></div>
+    <div class="step"><div class="n">3</div><div class="b"><strong>Ask something that needs SAP</strong>, e.g. <em>"Is the SAP connection working?"</em> (→ <code>sap_ping</code>) or <em>"Show me the first 20 materials of type FERT from table MARA (columns MATNR, MTART, MEINS)."</em> (→ <code>sap_read_table</code>). The executor logs each call:
+      <pre>toolExecutor: sap_read_table executed for tool=&lt;id&gt; in 340ms</pre>
+    </div></div>
+
+    <!-- 11 -->
+    <h2 id="deploy">11. Deployment notes (EC2 / PM2)</h2>
+    <ul>
+      <li><strong>Ship the SDK with the host, not the repo.</strong> The DLLs are ~60&nbsp;MB and SAP-licensed — keep them in <code>C:\nwrfcsdk</code> on the server, not in git. Add <code>nwrfcsdk/</code> and any local copy to <code>.gitignore</code>.</li>
+      <li><strong>Env vars must reach the PM2 process.</strong> Set <code>SAPNWRFC_HOME</code> + <code>PATH</code> at the machine level and restart PM2 with <code>--update-env</code>, or add them to the PM2 ecosystem file's <code>env</code> block.</li>
+      <li><strong>Match the platform.</strong> Windows EC2 → this Windows SDK. If you move the backend into the Linux Docker image, swap in the Linux SDK and set <code>LD_LIBRARY_PATH=/usr/local/sap/nwrfcsdk/lib</code> (or register via <code>ldconfig</code>).</li>
+      <li><strong>Pin Node to a version with node-rfc prebuilds</strong> so redeploys don't trigger a source compile on the server.</li>
+      <li><strong>Connection reuse.</strong> The adapter opens/closes a client per call (simple + safe). If SAP call volume grows, switch <code>_withClient</code> to a <code>node-rfc</code> <code>Pool</code> to avoid repeated logon cost.</li>
+      <li><strong>Network path.</strong> The Node host must reach the SAP application server on the gateway port <code>33&lt;sysnr&gt;</code> (e.g. sysnr 00 → 3300) — open that in the security group/firewall.</li>
+    </ul>
+
+    <!-- 12 -->
+    <h2 id="security">12. Security &amp; licensing (read this)</h2>
+    <div class="callout c-danger"><span class="t">⚠ SAP licensing</span>The SAP NW RFC SDK is SAP proprietary. Per the bundled <code>license terms</code>, you're granted usage in a <strong>development</strong> environment; deploying it in <strong>production</strong> with your application is valid only with sufficient SAP software licenses. Confirm your org's SAP license covers RFC/BAPI access before going live. Do <strong>not</strong> commit or redistribute the DLLs.</div>
+    <ul>
+      <li><strong>Dedicated least-privilege SAP user.</strong> Create a <em>Communication/System</em> user (not a dialog user) for RFC. Restrict its <code>S_RFC</code> authorization to only the function groups/modules you whitelist. It should be unable to run anything you didn't intend — defense in depth behind the code whitelist.</li>
+      <li><strong>Encrypt the password at rest</strong> (done above via <code>tokenCipher</code> → <code>passwd_enc</code>). Never store <code>passwd</code> in plaintext in the tool record.</li>
+      <li><strong>Keep it read-only by default.</strong> Write BAPIs mutate ERP data and usually require an explicit <code>BAPI_TRANSACTION_COMMIT</code>. Only add them to <code>allowed_functions</code> for agents that genuinely need them, and consider gating those behind a human-approval action.</li>
+      <li><strong>Cap rows &amp; fields.</strong> <code>RFC_READ_TABLE</code> has a 512-byte row-width limit and can be heavy — the adapter caps rows via <code>max_rows</code>; encourage the model to request specific <code>fields</code>.</li>
+      <li><strong>Consider SNC</strong> (Secure Network Communications) for encrypted transport to SAP in production; it's configured via additional connection parameters.</li>
+    </ul>
+
+    <!-- 13 -->
+    <h2 id="trouble">13. Troubleshooting</h2>
+    <table>
+      <tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr>
+      <tr><td><code>Cannot find module 'node-rfc'</code> or DLL load error / <code>sapnwrfc.dll not found</code></td><td>SDK not on PATH, or missing VC++ runtime, or PM2 didn't get the env</td><td>Confirm <code>C:\nwrfcsdk\lib</code> on <code>PATH</code>, install VC++ 2013 x64 redist, <code>pm2 restart --update-env</code></td></tr>
+      <tr><td><code>RFC_LOGON_FAILURE</code> — "Name or password is incorrect"</td><td>Wrong user/passwd/client, or user locked</td><td>Verify creds &amp; client with the smoke test (§6); check the SAP user isn't locked/expired</td></tr>
+      <tr><td><code>RFC_COMMUNICATION_FAILURE</code> — "partner not reached"</td><td>Host/sysnr wrong or network/firewall blocks the gateway port</td><td>Check <code>ashost</code>/<code>sysnr</code>; open port <code>33&lt;sysnr&gt;</code>; test <code>telnet host 3300</code></td></tr>
+      <tr><td><code>RFC_INVALID_PARAMETER</code> on a BAPI call</td><td>Import/table params don't match the RFM signature</td><td>Check the function module's signature in SAP (SE37); pass the exact structure names</td></tr>
+      <tr><td><code>Function '…' is not in this tool's allowed_functions whitelist</code></td><td>Working as designed</td><td>Add the RFM to <code>config.extras.allowed_functions</code> for that tool</td></tr>
+      <tr><td>node-rfc build fails on <code>npm install</code></td><td>No prebuilt binary for your Node version</td><td>Install VS Build Tools + Python 3, set <code>SAPNWRFC_HOME</code> before install, or switch to a Node version with prebuilds</td></tr>
+    </table>
+
+    <!-- 14 -->
+    <h2 id="setuplog">14. Setup verification log (this machine — 28 Jul 2026)</h2>
+    <p>This section records exactly what was checked and installed on the dev host, path by path, so it can be reproduced on the server. Everything below was <strong>verified green</strong> except the live SAP connection (needs your SAP credentials — the script is ready, see the last row).</p>
+
+    <h3>14.1 Prerequisites checked — path by path</h3>
+    <table>
+      <tr><th>#</th><th>What / which path</th><th>Command used</th><th>Result</th></tr>
+      <tr><td>1</td><td><code>C:\nwrfcsdk\lib</code> — SDK runtime DLLs</td><td><code>Get-ChildItem C:\nwrfcsdk\lib -Filter *.dll</code></td><td>✅ <code>sapnwrfc.dll</code> (7.68&nbsp;MB), <code>icudt57.dll</code>, <code>icuin57.dll</code>, <code>icuuc57.dll</code>, <code>libsapucum.dll</code> all present</td></tr>
+      <tr><td>2</td><td><code>SAPNWRFC_HOME</code> env var</td><td><code>[Environment]::GetEnvironmentVariable("SAPNWRFC_HOME","Machine")</code></td><td>✅ <code>C:\nwrfcsdk</code> (Machine level)</td></tr>
+      <tr><td>3</td><td><code>PATH</code> entries</td><td><code>$env:Path -split ";" | ? { $_ -match "nwrfcsdk" }</code></td><td>✅ <code>C:\nwrfcsdk\bin</code> <em>and</em> <code>C:\nwrfcsdk\lib</code> both on PATH (added by you earlier)</td></tr>
+      <tr><td>4</td><td>VC++ 2013 x64 runtime — <code>C:\Windows\System32\msvcr120.dll</code></td><td><code>Test-Path C:\Windows\System32\msvcr120.dll</code></td><td>✅ present (the runtime <code>sapnwrfc.dll</code> links against). Registry key absent but the DLL is what matters — proven by the successful load in 14.3.</td></tr>
+      <tr><td>5</td><td>Node / npm</td><td><code>node -v</code> · <code>npm -v</code></td><td>⚠️→✅ <strong>Node v24.11.1 (x64)</strong>, npm 11.6.2. Very new, but <code>node-rfc</code> engines = <code>^18 || &gt;= 20</code> and it uses N-API (ABI-stable), so it works — confirmed in 14.2/14.3.</td></tr>
+    </table>
+
+    <h3>14.2 Installed <code>node-rfc</code></h3>
+    <pre><span class="tok-c"># run from the backend project root</span>
+npm install node-rfc --no-audit --no-fund
+<span class="tok-c"># → "added 4 packages ... in 7s"  (fast = used a PREBUILT N-API binary, no source compile)</span>
+<span class="tok-c"># → package.json now lists node-rfc</span></pre>
+    <div class="callout c-warn"><span class="t">⚠ node-rfc 3.3.1 is deprecated by SAP</span>The install printed: <code>npm warn deprecated node-rfc@3.3.1: No longer supported (github.com/SAP/node-rfc/issues/329)</code>. It still installs and runs correctly today (verified below), but SAP has ended maintenance of the open-source binding. It's fine to proceed for now; just be aware you may want to pin the version and track that issue for a supported successor before long-term production reliance.</div>
+
+    <h3>14.3 Binding smoke test — proved <code>sapnwrfc.dll</code> loads</h3>
+    <p>This is the crucial test: loading <code>node-rfc</code> forces the OS to resolve and load <code>sapnwrfc.dll</code> + the ICU DLLs from <code>PATH</code>. It needs <em>no</em> SAP credentials.</p>
+    <pre><span class="tok-c"># command</span>
+node -e "const rfc=require('node-rfc'); console.log(Object.keys(rfc)); console.log(rfc.environment)"
+
+<span class="tok-c"># result (trimmed)</span>
+OK node-rfc loaded (sapnwrfc.dll resolved)
+exports: setIniFileDirectory, Client, Pool, Throughput, Server, RFC_RC, ...
+Client instantiated OK (not opened): true</pre>
+    <p><code>rfc.environment</code> confirmed the exact binding:</p>
+    <pre>{
+  "platform": { "name": "win32", "arch": "x64", "release": "10.0.26200" },
+  "env": {
+    "SAPNWRFC_HOME": "C:\\nwrfcsdk",
+    "nwrfcsdk_lib_on_path": <span class="tok-n">true</span>
+  },
+  "noderfc": {
+    "version": "3.3.1",
+    "nwrfcsdk": { "major": <span class="tok-n">7500</span>, "minor": <span class="tok-n">0</span>, "patchLevel": <span class="tok-n">17</span> }   <span class="tok-c">// = SAP NW RFC SDK 7.50.17 ✓ (your ZIP)</span>
+  }
+}</pre>
+    <div class="callout c-ok"><span class="t">✅ Infrastructure is fully wired</span>The SDK (7.50.17), the DLL load path, the VC++ runtime, Node, and the <code>node-rfc</code> binding are all confirmed working together on this machine. The connector code will run — the only thing left is pointing it at a real SAP system.</div>
+
+    <h3>14.4 Files created</h3>
+    <table>
+      <tr><th>Path</th><th>Purpose</th></tr>
+      <tr><td><code>scripts/sapSmokeTest.js</code></td><td>Live SAP connection test (open → RFC_PING → optional T000 read). Reads creds from env vars.</td></tr>
+      <tr><td><code>SAP_CONNECTOR_GUIDE.html</code></td><td>This guide.</td></tr>
+      <tr><td><code>package.json</code> / <code>package-lock.json</code></td><td>Updated — <code>node-rfc</code> added as a dependency.</td></tr>
+    </table>
+    <p class="callout c-tip"><span class="t">Note on <code>dev_rfc.log</code> / <code>dev_rfc.trc</code></span>The SAP RFC library auto-creates these trace files in the working directory when RFC tracing is on. They're harmless diagnostics. To silence them set env <code>RFC_TRACE=0</code> (or leave them for debugging). They can be git-ignored.</p>
+
+    <h3>14.5 The one remaining step — live SAP connection test</h3>
+    <p>Everything up to the SAP network boundary is proven. To finish, run the smoke test with your SAP system's credentials:</p>
+    <pre><span class="tok-c"># PowerShell — fill in your SAP values (direct app server):</span>
+$env:SAP_ASHOST=<span class="tok-s">"&lt;sap-app-server-host-or-ip&gt;"</span>
+$env:SAP_SYSNR=<span class="tok-s">"00"</span>
+$env:SAP_CLIENT=<span class="tok-s">"100"</span>
+$env:SAP_USER=<span class="tok-s">"&lt;rfc-service-user&gt;"</span>
+$env:SAP_PASSWD=<span class="tok-s">"&lt;password&gt;"</span>
+node scripts/sapSmokeTest.js
+
+<span class="tok-c"># Expected on success:</span>
+<span class="tok-c">#   CONNECTED in NNNms  →  sysid=XXX client=100 host=... </span>
+<span class="tok-c">#   RFC_PING: ok</span>
+<span class="tok-c">#   ✅ SAP SMOKE TEST PASSED — the connector will work.</span></pre>
+    <p>If that passes, proceed to <a class="inline" href="#adapter">§7</a>–<a class="inline" href="#toolrecord">§9</a> to drop in the adapter and create the tool record. If it fails, the error <code>key</code> tells you where: <code>RFC_LOGON_FAILURE</code> = credentials/client; <code>RFC_COMMUNICATION_FAILURE</code> = host/sysnr/network/firewall (see <a class="inline" href="#trouble">§13</a>).</p>
+
+    <!-- 15 -->
+    <h2 id="implemented">15. SAP connector — implemented &amp; live-tested (Avaali-IDES)</h2>
+    <div class="callout c-ok"><span class="t">✅ End-to-end connection verified</span>The connector code is in place and a live RFC call to your SAP system succeeded on 28&nbsp;Jul&nbsp;2026.</div>
+
+    <h3>15.1 Live SAP connection test result</h3>
+    <p>Ran <code>node scripts/sapSmokeTest.js</code> against the <strong>Avaali-IDES</strong> system:</p>
+    <pre>SDK bound: {"major":7500,"minor":0,"patchLevel":17} | lib on PATH: true
+Connecting with: {"user":"CO474","client":"800","lang":"EN","ashost":"54.169.73.118","sysnr":"00"}
+CONNECTED in 3059ms  →  sysid=AVI client=800 host=SAPIDESNEW rel=731
+RFC_PING: ok
+RFC_READ_TABLE T000: rows = [ '000|SAP AG', '001|Delivery', '066|early Watch' ]
+✅ SAP SMOKE TEST PASSED</pre>
+    <p>Network reachability was confirmed first: <code>Test-NetConnection 54.169.73.118 -Port 3300</code> → <code>TcpTestSucceeded: True</code> (gateway) and 3200 (dispatcher).</p>
+
+    <h3>15.2 Connection parameters (this system)</h3>
+    <table>
+      <tr><th>Param</th><th>Value</th><th>Source</th></tr>
+      <tr><td>Connection type</td><td>Custom Application Server (direct <code>ashost</code>/<code>sysnr</code>)</td><td>SAP Logon</td></tr>
+      <tr><td><code>ashost</code></td><td><code>54.169.73.118</code></td><td>Application Server</td></tr>
+      <tr><td><code>sysnr</code></td><td><code>00</code></td><td>Instance Number → gateway port 3300</td></tr>
+      <tr><td><code>sysid</code></td><td><code>AVI</code></td><td>System ID (informational for direct conn)</td></tr>
+      <tr><td><code>client</code></td><td><code>800</code></td><td>IDES demo client (confirmed by successful logon)</td></tr>
+      <tr><td><code>user</code></td><td><code>CO474</code></td><td>provided</td></tr>
+      <tr><td><code>lang</code></td><td><code>EN</code></td><td>default</td></tr>
+    </table>
+    <p>These are stored in <code>.env</code> as <code>SAP_ASHOST</code>, <code>SAP_SYSNR</code>, <code>SAP_SYSID</code>, <code>SAP_CLIENT</code>, <code>SAP_USER</code>, <code>SAP_PASSWD</code>, <code>SAP_LANG</code> (used by the smoke test and the tool-creation script).</p>
+    <div class="callout c-danger"><span class="t">⚠ Credential hygiene</span>The SAP password is currently in plaintext in <code>.env</code> for local testing. Do <strong>not</strong> commit it, and rotate it for production. In the actual agent tool record it is stored <strong>encrypted</strong> (AES-256-GCM via <code>tokenCipher</code>, field <code>passwd_enc</code>) — never in plaintext. Add <code>SAP_*</code> lines and any <code>dev_rfc.*</code> trace files to <code>.gitignore</code>.</div>
+
+    <h3>15.3 Changes made to the codebase</h3>
+    <table>
+      <tr><th>File</th><th>Change</th></tr>
+      <tr><td><code>package.json</code> / <code>package-lock.json</code></td><td><strong>Added</strong> <code>node-rfc</code> dependency (prebuilt N-API binary; no source compile).</td></tr>
+      <tr><td><code>services/standaloneAgents/toolAdapters/sapRfc.js</code></td><td><strong>New file</strong> — the SAP adapter (multi-function): <code>matches()</code> for tools whose name contains "sap" + <code>getLlmFunctions()</code> exposing <code>sap_ping</code>, <code>sap_call_function</code> (whitelisted), <code>sap_read_table</code>. Decrypts the SAP password via <code>utils/tokenCipher</code>. Read-first &amp; whitelisted by design.</td></tr>
+      <tr><td><code>services/standaloneAgents/toolExecutorService.js</code></td><td><strong>2 lines</strong> — <code>require("./toolAdapters/sapRfc")</code> and added <code>sapRfcAdapter</code> to the <code>ADAPTERS</code> array. No other logic touched.</td></tr>
+      <tr><td><code>.env</code></td><td><strong>Added</strong> <code>SAP_*</code> connection vars (for testing / tool creation).</td></tr>
+      <tr><td><code>scripts/sapSmokeTest.js</code></td><td><strong>New</strong> — live connection test (now loads <code>.env</code> via dotenv).</td></tr>
+      <tr><td><code>scripts/createSapTool.js</code></td><td><strong>New</strong> — attaches an encrypted SAP tool to a given agent, reading conn params from <code>.env</code>.</td></tr>
+      <tr><td><code>controller/standalone/toolController.js</code></td><td><strong>Edited</strong> — the generic tool API now (a) <strong>encrypts</strong> an incoming SAP password (<code>config.extras.passwd → passwd_enc</code>) on <code>attachTool</code>/<code>updateTool</code>, (b) <strong>never returns</strong> the password (client sees <code>passwd_configured</code> flag), (c) deep-merges <code>extras</code> on update so partial edits don't drop the stored password, and (d) adds <code>testTool</code> — a "Test Connection" handler that opens the SAP connection + RFC_PING.</td></tr>
+      <tr><td><code>routes/standaloneRoutes.js</code></td><td><strong>1 line</strong> — <code>POST /agents/:id/tools/:toolId/test</code> → <code>toolCtrl.testTool</code> (powers the frontend Test-Connection button).</td></tr>
+      <tr><td><code>services/standaloneAgents/toolAdapters/sapRfc.js</code></td><td>Also exports <code>ping</code> (used by the test endpoint, outside the LLM loop).</td></tr>
+      <tr><td><code>SAP_CONNECTOR_FRONTEND_GUIDE.md</code></td><td><strong>New</strong> — full frontend integration guide (connection form spec, REST endpoints + request/response examples, test flow, chat usage, deployment caveat). Hand this to the frontend team.</td></tr>
+    </table>
+    <div class="callout c-tip"><span class="t">Frontend flow (self-service SAP config)</span>End users enter their own SAP connection in the tool UI; the frontend calls <code>POST /agents/:id/tools</code> (type <code>builtin</code>, name containing "sap", params under <code>config.extras</code> with plaintext <code>passwd</code>). The backend encrypts the password and never returns it. A <code>POST …/tools/:toolId/test</code> verifies connectivity. Full details in <code>SAP_CONNECTOR_FRONTEND_GUIDE.md</code>.</div>
+    <p>Verification that the adapter registers correctly:</p>
+    <pre>node -e "const {buildLlmToolsArray}=require('./services/standaloneAgents/toolExecutorService'); ..."
+<span class="tok-c"># LLM functions exposed for a SAP tool:</span>
+<span class="tok-c">#   - sap_ping</span>
+<span class="tok-c">#   - sap_call_function</span>
+<span class="tok-c">#   - sap_read_table</span></pre>
+
+    <h3>15.4 Final step — attach the tool to an agent</h3>
+    <p>The connector is ready; it just needs a <code>StandaloneTool</code> record so a specific agent can use it. Run:</p>
+    <pre><span class="tok-c"># ping + table reads only (safe start):</span>
+node scripts/createSapTool.js &lt;AGENT_ID&gt;
+
+<span class="tok-c"># also allow specific BAPIs:</span>
+node scripts/createSapTool.js &lt;AGENT_ID&gt; BAPI_MATERIAL_GET_DETAIL,BAPI_CUSTOMER_GETDETAIL2</pre>
+    <p>Then <code>pm2 restart avagama-backend --update-env</code> and chat with that agent, e.g. <em>"Is the SAP connection working?"</em> (→ <code>sap_ping</code>) or <em>"Read 10 rows of table T001 (fields BUKRS, BUTXT) from SAP."</em> (→ <code>sap_read_table</code>).</p>
+    <div class="callout c-tip"><span class="t">Still needed from you to finalise</span>(1) which <strong>agent</strong> should get the SAP tool (its <code>_id</code>), and (2) the list of <strong>BAPIs/tables</strong> it may use (for the whitelist). Until BAPIs are whitelisted, <code>sap_call_function</code> stays locked; <code>sap_ping</code> and <code>sap_read_table</code> work out of the box.</div>
+
+    <footer>
+      <p><strong>Summary path:</strong> extract SDK → set <code>SAPNWRFC_HOME</code>+<code>PATH</code> → <code>npm i node-rfc</code> → smoke-test → add <code>toolAdapters/sapRfc.js</code> → register in <code>ADAPTERS</code> → create an encrypted <code>StandaloneTool</code> named "SAP&nbsp;…" → restart → chat. The connector reuses your existing tool framework and <code>tokenCipher</code> — no core changes. <strong>Status: infrastructure verified, adapter implemented &amp; registered, live SAP connection tested ✓ — pending only the per-agent tool record.</strong></p>
+      <p>Generated for the Avagama backend · SAP NetWeaver RFC SDK 7.50.17 (Windows x64) · <code>node-rfc</code>. This guide is engineering documentation; it does not bundle or redistribute any SAP binary.</p>
+    </footer>
+  </main>
+</div>
+</body>
+</html>

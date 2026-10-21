@@ -1,0 +1,34 @@
+{
+  "scenario": "S04",
+  "expected": "Manual Review",
+  "invoice_data": {
+    "invoice_number": "INV-S04-2220",
+    "vendor_name": "MedInc",
+    "invoice_date": "2026-10-14",
+    "po_number": "4500002220",
+    "currency": "USD",
+    "payment_terms": "Net 60",
+    "tax_type": "CA Sales Tax @ 6.00%",
+    "subtotal": 13250.0,
+    "tax": 795.0,
+    "freight": 180.0,
+    "discount": 0.0,
+    "total_amount": 14225.0,
+    "items": [
+      {
+        "item": "Microcontroller MCU-32",
+        "quantity": 500,
+        "uom": "EA",
+        "unit_price": 12.5,
+        "amount": 6250.0
+      },
+      {
+        "item": "PCB Assembly Board",
+        "quantity": 200,
+        "uom": "EA",
+        "unit_price": 35.0,
+        "amount": 7000.0
+      }
+    ]
+  }
+}

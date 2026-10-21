@@ -1,0 +1,34 @@
+{
+  "scenario": "S05",
+  "expected": "Perfect Match",
+  "invoice_data": {
+    "invoice_number": "INV-S05-2221",
+    "vendor_name": "RetireYou",
+    "invoice_date": "2026-10-14",
+    "po_number": "4500002221",
+    "currency": "USD",
+    "payment_terms": "Net 30",
+    "tax_type": "Sales Tax Exempt @ 0.00%",
+    "subtotal": 2900.0,
+    "tax": 0.0,
+    "freight": 0.0,
+    "discount": 0.0,
+    "total_amount": 2900.0,
+    "items": [
+      {
+        "item": "Freight Forwarding Service",
+        "quantity": 1,
+        "uom": "EA",
+        "unit_price": 2500.0,
+        "amount": 2500.0
+      },
+      {
+        "item": "Customs Clearance Fee",
+        "quantity": 1,
+        "uom": "EA",
+        "unit_price": 400.0,
+        "amount": 400.0
+      }
+    ]
+  }
+}

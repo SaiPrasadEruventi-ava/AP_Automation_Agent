@@ -1,0 +1,27 @@
+{
+  "scenario": "S14",
+  "expected": "Manual Review",
+  "invoice_data": {
+    "invoice_number": "INV-S14-2230",
+    "vendor_name": "MedInc",
+    "invoice_date": "2026-11-13",
+    "po_number": "4500002230",
+    "currency": "USD",
+    "payment_terms": "Net 30",
+    "tax_type": "CA Sales Tax @ 6.00%",
+    "subtotal": 1140.0,
+    "tax": 68.4,
+    "freight": 60.0,
+    "discount": 0.0,
+    "total_amount": 1268.4,
+    "items": [
+      {
+        "item": "Network Cable Cat6 305m",
+        "quantity": 12,
+        "uom": "ROLL",
+        "unit_price": 95.0,
+        "amount": 1140.0
+      }
+    ]
+  }
+}

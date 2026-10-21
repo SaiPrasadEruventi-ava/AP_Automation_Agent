@@ -1,0 +1,301 @@
+{
+  "scenarios": {
+    "S01": {
+      "po_number": "4500002217",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003060",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Perfect Match \u2014 Auto Post",
+      "expected": "Perfect Match",
+      "created_at": "2026-10-14 17:26:34",
+      "invoice_number": "INV-S01-2217",
+      "pdf": "demo_invoices\\INV-S01-2217.pdf",
+      "total": 15255.0,
+      "vendor_name": "EV Parts Inc."
+    },
+    "S02": {
+      "po_number": "4500002218",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003061",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Price Within Tolerance \u2014 Auto Post",
+      "expected": "Perfect Match",
+      "created_at": "2026-10-14 17:33:13",
+      "invoice_number": "INV-S02-2218",
+      "pdf": "demo_invoices\\INV-S02-2218.pdf",
+      "total": 8853.0,
+      "vendor_name": "WaveCrest Labs"
+    },
+    "S03": {
+      "po_number": "4500002219",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003062",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Price Variance \u2014 Exceeds Tolerance",
+      "expected": "Manual Review",
+      "created_at": "2026-10-14 17:33:15",
+      "invoice_number": "INV-S03-2219",
+      "pdf": "demo_invoices\\INV-S03-2219.pdf",
+      "total": 8316.6,
+      "vendor_name": "BeSafe Inc"
+    },
+    "S04": {
+      "po_number": "4500002220",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003063",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Short Delivery \u2014 Partial GRN",
+      "expected": "Manual Review",
+      "created_at": "2026-10-14 17:33:18",
+      "invoice_number": "INV-S04-2220",
+      "pdf": "demo_invoices\\INV-S04-2220.pdf",
+      "total": 14225.0,
+      "vendor_name": "MedInc"
+    },
+    "S05": {
+      "po_number": "4500002221",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003064",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Duplicate Invoice",
+      "expected": "Perfect Match",
+      "created_at": "2026-10-14 17:33:20",
+      "invoice_number": "INV-S05-2221",
+      "pdf": "demo_invoices\\INV-S05-2221.pdf",
+      "total": 2900.0,
+      "vendor_name": "RetireYou"
+    },
+    "S06": {
+      "po_number": "4500002222",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003065",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Tax Rate Mismatch",
+      "expected": "Manual Review",
+      "created_at": "2026-10-14 17:33:22",
+      "invoice_number": "INV-S06-2222",
+      "pdf": "demo_invoices\\INV-S06-2222.pdf",
+      "total": 50295.0,
+      "vendor_name": "EV Parts Inc."
+    },
+    "S07": {
+      "po_number": "4500002223",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003066",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Unit of Measure Mismatch",
+      "expected": "Manual Review",
+      "created_at": "2026-10-14 17:33:24",
+      "invoice_number": "INV-S07-2223",
+      "pdf": "demo_invoices\\INV-S07-2223.pdf",
+      "total": 2735.0,
+      "vendor_name": "WaveCrest Labs"
+    },
+    "S08": {
+      "po_number": "4500002224",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003067",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Payment Terms Mismatch",
+      "expected": "Manual Review",
+      "created_at": "2026-10-14 17:33:27",
+      "invoice_number": "INV-S08-2224",
+      "pdf": "demo_invoices\\INV-S08-2224.pdf",
+      "total": 33266.0,
+      "vendor_name": "BeSafe Inc"
+    },
+    "S09": {
+      "po_number": "4500002225",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003068",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Freight Overcharge",
+      "expected": "Manual Review",
+      "created_at": "2026-10-14 17:33:29",
+      "invoice_number": "INV-S09-2225",
+      "pdf": "demo_invoices\\INV-S09-2225.pdf",
+      "total": 4254.0,
+      "vendor_name": "MedInc"
+    },
+    "S10": {
+      "po_number": "4500002226",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003069",
+          "year": "2026"
+        },
+        {
+          "type": "122",
+          "document": "5000003070",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Damaged Goods \u2014 QC Return",
+      "expected": "Manual Review",
+      "created_at": "2026-10-14 17:33:31",
+      "invoice_number": "INV-S10-2226",
+      "pdf": "demo_invoices\\INV-S10-2226.pdf",
+      "total": 9237.56,
+      "vendor_name": "RetireYou"
+    },
+    "S11": {
+      "po_number": "4500002227",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003071",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Vendor Mismatch",
+      "expected": "Manual Review",
+      "created_at": "2026-10-14 17:33:34",
+      "invoice_number": "INV-S11-2227",
+      "pdf": "demo_invoices\\INV-S11-2227.pdf",
+      "total": 5261.0,
+      "vendor_name": "Delta Office Supplies"
+    },
+    "S12": {
+      "po_number": "4500002228",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003072",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "PO Closed in SAP",
+      "expected": "Manual Review",
+      "created_at": "2026-10-14 17:33:36",
+      "invoice_number": "INV-S12-2228",
+      "pdf": "demo_invoices\\INV-S12-2228.pdf",
+      "total": 1192.5,
+      "vendor_name": "WaveCrest Labs"
+    },
+    "S13": {
+      "po_number": "4500002229",
+      "documents": [],
+      "error": "",
+      "title": "GRN Missing \u2014 Goods Not Received",
+      "expected": "Incomplete \u2014 Missing Documents",
+      "created_at": "2026-10-14 17:33:37",
+      "invoice_number": "INV-S13-2229",
+      "pdf": "demo_invoices\\INV-S13-2229.pdf",
+      "total": 2796.0,
+      "vendor_name": "BeSafe Inc"
+    },
+    "S14": {
+      "po_number": "4500002230",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003073",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Future-Dated Invoice",
+      "expected": "Manual Review",
+      "created_at": "2026-10-14 17:33:39",
+      "invoice_number": "INV-S14-2230",
+      "pdf": "demo_invoices\\INV-S14-2230.pdf",
+      "total": 1268.4,
+      "vendor_name": "MedInc"
+    },
+    "S15": {
+      "po_number": "4500002231",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003074",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Arithmetic Error on Invoice",
+      "expected": "Manual Review",
+      "created_at": "2026-10-14 17:33:42",
+      "invoice_number": "INV-S15-2231",
+      "pdf": "demo_invoices\\INV-S15-2231.pdf",
+      "total": 2206.4,
+      "vendor_name": "RetireYou"
+    },
+    "S16": {
+      "po_number": "4500002232",
+      "documents": [
+        {
+          "type": "101",
+          "document": "5000003075",
+          "year": "2026"
+        }
+      ],
+      "error": "",
+      "title": "Goods Received After Invoice Date",
+      "expected": "Manual Review",
+      "created_at": "2026-10-14 17:33:44",
+      "invoice_number": "INV-S16-2232",
+      "pdf": "demo_invoices\\INV-S16-2232.pdf",
+      "total": 2528.0,
+      "vendor_name": "EV Parts Inc."
+    }
+  },
+  "system": {
+    "system": "S4",
+    "label": "SAP S/4HANA",
+    "configured": true,
+    "host": "65.2.76.131",
+    "sysnr": "57",
+    "client": "100",
+    "user": "RPA"
+  },
+  "updated_at": "2026-10-14 17:35:01"
+}

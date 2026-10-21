@@ -50,8 +50,31 @@ def _parse_date(date_str: str) -> datetime:
         return datetime.today()
 
 
+def _sap_invoices(invoice_number: str, vendor_code: str) -> list:
+    """Live (posted or parked) supplier invoices in SAP with this
+    reference for this vendor — [] when not in SAP mode or unreachable."""
+    import erp_mock
+    if not erp_mock.using_sap() or not invoice_number:
+        return []
+    try:
+        import erp_sap
+        docs = erp_sap.find_supplier_invoices(reference=invoice_number,
+                                              vendor=vendor_code or None)
+    except Exception as e:  # SAP unreachable must not block processing
+        print(f"  ⚠️  SAP duplicate check skipped: {e}")
+        return []
+    return [d for d in docs if d["is_posted"] or d["is_parked"]]
+
+
+def _describe_sap(docs: list) -> str:
+    return "; ".join(
+        f"SAP invoice {d['document']}/{d['fiscal_year']} ({d['status']}, "
+        f"{d['currency']} {d['gross_amount']:,.2f}, entered {d['entered_on']})"
+        for d in docs)
+
+
 def check_duplicate(invoice_number: str, vendor_name: str,
-                     amount, invoice_date: str) -> dict:
+                     amount, invoice_date: str, vendor_code: str = None) -> dict:
     """
     Check if an invoice is a duplicate against the processed log.
 
@@ -69,6 +92,7 @@ def check_duplicate(invoice_number: str, vendor_name: str,
 
     inv_amount = _parse_amount(amount)
     inv_date   = _parse_date(invoice_date)
+    sap_docs   = _sap_invoices(invoice_number, vendor_code)
 
     # Rule 1 / 2 — exact-number lookup (O(1) via the Redis hash)
     existing = redis_store.processed_get(invoice_number)
@@ -79,6 +103,7 @@ def check_duplicate(invoice_number: str, vendor_name: str,
                 f"Invoice {invoice_number} was already processed on "
                 f"{existing.get('processed_date')} with status "
                 f"'{existing.get('status')}'"
+                + (f" — and it already exists in SAP: {_describe_sap(sap_docs)}" if sap_docs else "")
             )
             print(f"  🔁 EXACT DUPLICATE: {reason}")
             return {
@@ -100,6 +125,20 @@ def check_duplicate(invoice_number: str, vendor_name: str,
                 "duplicate_reason": reason,
                 "original_invoice": existing.get("invoice_number"),
             }
+
+    # Rule 1b — the ERP itself already holds this vendor invoice (posted
+    # or parked), e.g. entered directly in MIRO or by an earlier run
+    # whose AP log was cleared.
+    if sap_docs:
+        reason = (f"Invoice {invoice_number} already exists in SAP for this vendor: "
+                  f"{_describe_sap(sap_docs)}")
+        print(f"  🔁 SAP DUPLICATE: {reason}")
+        return {
+            "is_duplicate":     True,
+            "duplicate_type":   "SAP " + sap_docs[0]["status"],
+            "duplicate_reason": reason,
+            "original_invoice": invoice_number,
+        }
 
     # Rule 3 — fuzzy: same vendor + same amount within the day window.
     # Query the by-date sorted set for candidates in range, then check
@@ -147,9 +186,14 @@ def check_duplicate(invoice_number: str, vendor_name: str,
 
 def register_invoice(invoice_number: str, vendor_name: str,
                       po_number: str, amount, currency: str,
-                      invoice_date: str, status: str) -> None:
+                      invoice_date: str, status: str,
+                      sap_posting: dict = None) -> None:
     """Add a processed invoice to the log so future submissions can be checked against it."""
+    sap_posting = sap_posting or {}
     record = {
+        "sap_action":      sap_posting.get("action", ""),
+        "sap_document":    sap_posting.get("document", ""),
+        "sap_fiscal_year": sap_posting.get("fiscal_year", ""),
         "invoice_number":  invoice_number,
         "vendor_name":     vendor_name,
         "po_number":       po_number,

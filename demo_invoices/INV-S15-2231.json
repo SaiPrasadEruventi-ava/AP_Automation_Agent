@@ -1,0 +1,34 @@
+{
+  "scenario": "S15",
+  "expected": "Manual Review",
+  "invoice_data": {
+    "invoice_number": "INV-S15-2231",
+    "vendor_name": "RetireYou",
+    "invoice_date": "2026-10-14",
+    "po_number": "4500002231",
+    "currency": "USD",
+    "payment_terms": "Net 30",
+    "tax_type": "CA Sales Tax @ 6.00%",
+    "subtotal": 1940.0,
+    "tax": 116.4,
+    "freight": 50.0,
+    "discount": 0.0,
+    "total_amount": 2206.4,
+    "items": [
+      {
+        "item": "Safety Helmet Class E",
+        "quantity": 40,
+        "uom": "EA",
+        "unit_price": 32.0,
+        "amount": 1380.0
+      },
+      {
+        "item": "Hi-Vis Safety Vest",
+        "quantity": 40,
+        "uom": "EA",
+        "unit_price": 14.0,
+        "amount": 560.0
+      }
+    ]
+  }
+}

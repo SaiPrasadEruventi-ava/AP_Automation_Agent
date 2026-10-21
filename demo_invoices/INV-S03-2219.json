@@ -1,0 +1,34 @@
+{
+  "scenario": "S03",
+  "expected": "Manual Review",
+  "invoice_data": {
+    "invoice_number": "INV-S03-2219",
+    "vendor_name": "BeSafe Inc",
+    "invoice_date": "2026-10-14",
+    "po_number": "4500002219",
+    "currency": "USD",
+    "payment_terms": "Net 30",
+    "tax_type": "CA Sales Tax @ 6.00%",
+    "subtotal": 7610.0,
+    "tax": 456.6,
+    "freight": 250.0,
+    "discount": 0.0,
+    "total_amount": 8316.6,
+    "items": [
+      {
+        "item": "Office Chair Ergonomic",
+        "quantity": 20,
+        "uom": "EA",
+        "unit_price": 163.0,
+        "amount": 3260.0
+      },
+      {
+        "item": "Executive Desk 180cm",
+        "quantity": 10,
+        "uom": "EA",
+        "unit_price": 435.0,
+        "amount": 4350.0
+      }
+    ]
+  }
+}

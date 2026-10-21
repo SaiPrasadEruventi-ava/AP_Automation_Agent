@@ -100,14 +100,41 @@ def generate_summary(invoice_data, po_data, grn_data, matching,
         "final_status": final_status,
         "reviewer":     reviewer_info or {},
     }
-    llm = _get_llm()
-    resp = llm.invoke([
-        SystemMessage(content=SUMMARY_PROMPT),
-        HumanMessage(content=f"AP data:\n{json.dumps(context, indent=2)}"),
-    ])
-    summary = resp.content.strip()
+    try:
+        if not os.getenv("MISTRAL_API_KEY"):
+            raise RuntimeError("MISTRAL_API_KEY not set")
+        llm = _get_llm()
+        resp = llm.invoke([
+            SystemMessage(content=SUMMARY_PROMPT),
+            HumanMessage(content=f"AP data:\n{json.dumps(context, indent=2, default=str)}"),
+        ])
+        summary = resp.content.strip()
+    except Exception as e:
+        # The summary is narrative only — never let the LLM being
+        # unavailable stop an invoice that SAP has already posted/parked.
+        print(f"  ⚠️  LLM summary unavailable ({e}) — using the rule-based summary")
+        summary = _fallback_summary(invoice_data, po_data, grn_data, matching, final_status)
     print(f"\n  {summary}\n")
     return summary
+
+
+def _fallback_summary(invoice_data, po_data, grn_data, matching, final_status) -> str:
+    inv = invoice_data or {}
+    m = matching or {}
+    parts = [
+        f"Invoice {inv.get('invoice_number', '?')} from {inv.get('vendor_name', '?')} "
+        f"for {inv.get('currency', '')} {float(inv.get('total_amount') or 0):,.2f} was matched "
+        f"against PO {(po_data or {}).get('po_number', '?')} and goods receipt "
+        f"{(grn_data or {}).get('grn_number', '—')} read live from the ERP.",
+        f"Header match: {'pass' if m.get('header_match') else 'fail'}; line items: "
+        f"{'pass' if m.get('line_match') else 'fail'}; variance vs PO "
+        f"{m.get('variance_percentage', 0):.2f}%.",
+    ]
+    mism = m.get("mismatches") or []
+    if mism:
+        parts.append("Issues: " + "; ".join(str(x) for x in mism[:4]) + ".")
+    parts.append(f"Final Decision: {final_status}.")
+    return " ".join(parts)
 
 
 # ── CSS & palette ─────────────────────────────────────────────────────────────
@@ -232,9 +259,9 @@ def _pct_pill(pct, threshold=2.0):
 # ── 9-check approval checklist ────────────────────────────────────────────────
 
 _ALL_CHECKS = [
-    ("PO Validity",        "Purchase Order is Open / Partially Open and not expired"),
-    ("GRN Validation",     "Goods Receipt Note is approved and date precedes invoice"),
-    ("Invoice Date",       "Invoice date is not future-dated or older than 90 days"),
+    ("PO Validity",        "Purchase Order is Open / Partially Open in the ERP — not deleted, closed or awaiting release"),
+    ("GRN Validation",     "Goods receipt posted in the ERP and dated on/before the invoice"),
+    ("Invoice Date",       "Invoice date is not future-dated, older than 90 days, or before the PO"),
     ("Vendor / Header",    "Vendor name, PO reference and currency all match"),
     ("Unit Price",         "Each line unit price within ±2% of PO agreed price"),
     ("Unit of Measure",    "Line UOM matches PO (EA, KG, LTR, BOX …)"),
@@ -244,6 +271,7 @@ _ALL_CHECKS = [
     ("Payment Terms",      "Payment terms (Net 30/45/60) match PO"),
     ("Line Amounts",       "Qty × Unit price = line total (arithmetic check)"),
     ("Invoice Total",      "Sum of lines + tax + freight − discount = invoice total"),
+    ("Duplicate Check",    "Invoice not already processed — AP log and the ERP's own invoice table"),
 ]
 
 def _checklist_approved():
@@ -259,12 +287,12 @@ def _checklist_approved():
         )
     return f"<ul class='checklist'>{items}</ul>"
 
-def _checklist_with_failures(failed_checks: list, reasons: list,
-                              matching: dict = None,
-                              invoice_data: dict = None,
-                              po_data: dict = None) -> str:
+def evaluate_checks(failed_checks: list, reasons: list,
+                    matching: dict = None,
+                    invoice_data: dict = None,
+                    po_data: dict = None) -> dict:
     """
-    Checklist where failed items are red; passed items are green.
+    {check name: failed?} for every item in _ALL_CHECKS.
 
     Determines each check's pass/fail status via EXPLICIT, deterministic
     rules — never by tokenizing reason text into individual words and
@@ -361,11 +389,11 @@ def _checklist_with_failures(failed_checks: list, reasons: list,
     ) and _has_prefix("Price Variance — Total Amount Mismatch")
 
     checks_failed = {
-        "PO Validity":        _contains_phrase(
+        "PO Validity":        _has_prefix("PO Validity —") or _contains_phrase(
             "po not found", "po status", "po expired", "not open",
         ),
-        "GRN Validation":     grn_doc_invalid,
-        "Invoice Date":       invoice_date_invalid,
+        "GRN Validation":     _has_prefix("GRN Validation —") or grn_doc_invalid,
+        "Invoice Date":       _has_prefix("Invoice Date —") or invoice_date_invalid,
         "Vendor / Header":    _has_prefix(
             "Vendor Mismatch —", "PO Number Mismatch —", "Currency Mismatch —",
             "Header Mismatch —",
@@ -377,11 +405,22 @@ def _checklist_with_failures(failed_checks: list, reasons: list,
         "Freight & Discount": _has_prefix("Freight Overcharge —", "Price Variance — Freight",
                                            "Price Variance — Discount"),
         "Payment Terms":      _has_prefix("Payment Terms Mismatch —"),
-        "Line Amounts":       _has_prefix("Price Variance — Line Item Subtotal")
-                               and not qty_mismatch,
-        "Invoice Total":      invoice_total_invalid,
+        "Line Amounts":       _has_prefix("Line Amount Mismatch —") or (
+                               _has_prefix("Price Variance — Line Item Subtotal")
+                               and not qty_mismatch),
+        "Invoice Total":      _has_prefix("Invoice Total Mismatch —") or invoice_total_invalid,
+        "Duplicate Check":    _has_prefix("Duplicate Invoice —"),
     }
 
+    return checks_failed
+
+
+def _checklist_with_failures(failed_checks: list, reasons: list,
+                              matching: dict = None,
+                              invoice_data: dict = None,
+                              po_data: dict = None) -> str:
+    """Render the checklist; pass/fail per item from evaluate_checks()."""
+    checks_failed = evaluate_checks(failed_checks, reasons, matching, invoice_data, po_data)
     items = ""
     for name, desc in _ALL_CHECKS:
         failed = checks_failed.get(name, False)
@@ -1119,9 +1158,10 @@ def _build_full_email(invoice_data, po_data, grn_data, matching,
                       final_status, summary, decision_info=None,
                       reviewer_info=None, variance_threshold=2.0):
     """Route to the correct email template and return HTML body."""
+    sap_html = sap_posting_html((decision_info or {}).get("sap_posting"))
     if final_status in ("Perfect Match", "Approved by Reviewer"):
         return _email_approved(invoice_data, po_data, grn_data, matching,
-                               summary, reviewer_info, variance_threshold)
+                               summary, reviewer_info, variance_threshold) + sap_html
     elif final_status.startswith("Incomplete") or final_status.startswith("Error"):
         # Covers every "couldn't complete processing" case — missing/unreadable
         # invoice, extraction failure, PO not found in ERP, pipeline errors,
@@ -1129,11 +1169,11 @@ def _build_full_email(invoice_data, po_data, grn_data, matching,
         # introduced later automatically get this template instead of being
         # silently unhandled.
         return _email_missing_docs(invoice_data, po_data, grn_data, matching,
-                                   summary, decision_info or {})
+                                   summary, decision_info or {}) + sap_html
     else:
         return _email_review_or_rejected(invoice_data, po_data, grn_data, matching,
                                          summary, decision_info or {}, reviewer_info,
-                                         final_status, variance_threshold)
+                                         final_status, variance_threshold) + sap_html
 
 
 def send_result_email(invoice_data, po_data, grn_data, matching,
@@ -1294,3 +1334,64 @@ def send_review_request_email(invoice_data, matching, decision_info,
         )
         print(f"  ✅ Review request saved: {path.name}")
         return True
+
+
+
+# ── SAP posting block (email + dashboard detail) ──────────────────────────────
+
+_SAP_ACTION_STYLE = {
+    "Posted":    ("#1e8449", "#e9f7ef", "Supplier invoice POSTED in SAP"),
+    "Parked":    ("#b45309", "#fef3e2", "Supplier invoice PARKED in SAP for review"),
+    "Deleted":   ("#5d6d7e", "#f2f4f4", "Parked invoice DELETED in SAP (rejected)"),
+    "Reversed":  ("#5d6d7e", "#f2f4f4", "Invoice REVERSED in SAP"),
+    "Simulated": ("#2e86c1", "#ebf5fb", "SAP simulation only — nothing written (SAP_INVOICE_MODE=simulate)"),
+    "Skipped":   ("#5d6d7e", "#f2f4f4", "Not created in SAP"),
+    "Failed":    ("#cb4335", "#fdedec", "SAP rejected the posting"),
+}
+
+
+def sap_posting_html(sap: dict) -> str:
+    """Card describing what happened in SAP for this invoice."""
+    if not sap:
+        return ""
+    import html as _h
+    action = sap.get("action", "")
+    color, bg, label = _SAP_ACTION_STYLE.get(action, ("#5d6d7e", "#f2f4f4", action))
+    rows = []
+    if sap.get("document"):
+        rows.append(("Invoice document", f"{sap['document']} / {sap.get('fiscal_year', '')}"
+                     + (f" · company code {sap['company_code']}" if sap.get("company_code") else "")))
+    if sap.get("reversal_document"):
+        rows.append(("Reversal document", sap["reversal_document"]))
+    if sap.get("payment_block"):
+        rows.append(("Payment block", f"{sap['payment_block']} — blocked for payment in SAP "
+                     "(variance outside tolerance)"))
+    if sap.get("system"):
+        rows.append(("System", sap["system"]))
+    if sap.get("timestamp"):
+        rows.append(("When", sap["timestamp"]))
+    if sap.get("error"):
+        rows.append(("SAP message", sap["error"]))
+    for m in (sap.get("messages") or [])[:4]:
+        rows.append(("Note", m))
+    table = "".join(
+        f"<tr><td style='padding:4px 10px 4px 0;color:#666;white-space:nowrap'>{_h.escape(k)}</td>"
+        f"<td style='padding:4px 0'>{_h.escape(str(v))}</td></tr>" for k, v in rows)
+    sim = sap.get("simulation") or []
+    sim_html = ""
+    if sim and action in ("Posted", "Simulated", "Parked"):
+        sim_rows = "".join(
+            f"<tr><td>{_h.escape(l.get('gl_account', ''))}</td>"
+            f"<td>{_h.escape(l.get('account_type', ''))}</td>"
+            f"<td>{_h.escape(l.get('po_item', '') if l.get('po_item', '').strip('0') else '')}</td>"
+            f"<td>{_h.escape(l.get('tax_code', ''))}</td>"
+            f"<td>{_h.escape(l.get('debit_credit', ''))}</td>"
+            f"<td style='text-align:right'>{l.get('amount', 0):,.2f}</td></tr>" for l in sim)
+        sim_html = ("<div style='margin-top:10px;font-size:12px;color:#666'>SAP accounting "
+                    "document (simulation):</div><table class='data' style='width:100%;font-size:12px'>"
+                    "<tr><th>G/L</th><th>Type</th><th>PO item</th><th>Tax</th><th>Dr/Cr</th>"
+                    f"<th style='text-align:right'>Amount</th></tr>{sim_rows}</table>")
+    return (f"<div style='margin:18px 0;padding:14px 16px;border:1px solid {color};"
+            f"border-radius:8px;background:{bg}'>"
+            f"<div style='font-weight:700;color:{color};margin-bottom:8px'>🏦 {label}</div>"
+            f"<table style='font-size:13px'>{table}</table>{sim_html}</div>")
