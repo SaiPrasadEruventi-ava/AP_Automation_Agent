@@ -108,8 +108,23 @@ jobs:
           $ErrorActionPreference = 'Continue'
           Set-Location $env:APP_DIR
           if (-not (Test-Path .venv\Scripts\python.exe)) {
-            py -3.12 -m venv .venv
-            if ($LASTEXITCODE -ne 0) { throw "Could not create the venv - is Python 3.12 installed for all users? (guide step 3)" }
+            # Find a Python 3.12. The runner runs as SYSTEM, so a per-user
+            # "py" registration may be invisible to it - try the standard
+            # install folders first, then the py launcher.
+            $candidates = @("C:\Program Files\Python312\python.exe", "C:\Python312\python.exe") +
+              @(Get-ChildItem "C:\Users\*\AppData\Local\Programs\Python\Python312\python.exe" -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+            $base = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+            if (-not $base) {
+              $base = (py -3.12 -c "import sys; print(sys.executable)" 2>$null | Out-String).Trim()
+              if ($LASTEXITCODE -ne 0) { $base = "" }
+            }
+            if (-not $base) {
+              "Python installations visible to the runner:"; py -0p 2>$null
+              throw "Python 3.12 not found. Install it from python.org with 'Install for all users' (C:\Program Files\Python312) - guide step 3"
+            }
+            "Using Python: $base"
+            & $base -m venv .venv
+            if ($LASTEXITCODE -ne 0) { throw "Could not create the venv with $base" }
           }
           .\.venv\Scripts\python.exe -m pip install --upgrade pip --quiet --disable-pip-version-check
           if ($LASTEXITCODE -ne 0) { throw "pip upgrade failed" }
