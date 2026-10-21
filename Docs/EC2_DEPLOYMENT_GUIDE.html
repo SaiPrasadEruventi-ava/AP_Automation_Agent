@@ -89,7 +89,7 @@
 <nav class="sidebar">
   <div class="sidebar-logo">
     <h2>AP Engine Deployment</h2>
-    <p>EC2 Windows · GitHub Actions · SAP RFC · port 2000</p>
+    <p>EC2 Windows · GitHub Actions · SAP RFC · port 8090</p>
   </div>
   <div class="nav-section">Overview</div>
   <a class="nav-link" href="#overview">Architecture &amp; ports</a>
@@ -104,8 +104,8 @@
   <a class="nav-link" href="#s6">6. Clone code + .env</a>
   <a class="nav-link" href="#s7">7. Python venv + test run</a>
   <a class="nav-link" href="#s8">8. Windows service (NSSM)</a>
-  <a class="nav-link" href="#s9">9. Nginx on port 2000</a>
-  <a class="nav-link" href="#s10">10. Open port 2000</a>
+  <a class="nav-link" href="#s9">9. Nginx on port 8090</a>
+  <a class="nav-link" href="#s10">10. Open port 8090</a>
   <div class="nav-section">Phase 3 — CI/CD</div>
   <a class="nav-link" href="#s11">11. GitHub runner #3</a>
   <a class="nav-link" href="#s12">12. GitHub secret (optional)</a>
@@ -122,13 +122,13 @@
   <h1>AP Engine — EC2 Deployment Guide</h1>
   <p>Deploys the SAP-integrated AP 3-Way Match engine (Python / FastAPI) to the same EC2 Windows Server that runs Avagama,
   using the same pattern: a GitHub Actions self-hosted runner on the server, Nginx in front, and an auto-starting Windows service.
-  Public URL: <b>http://13.207.66.222:2000</b>.</p>
+  Public URL: <b>http://13.207.66.222:8090</b>.</p>
   <div class="badges">
     <span class="badge b-blue">🐍 Python 3.12 + FastAPI</span>
     <span class="badge b-green">🏦 SAP NW RFC SDK 7.50 + pyrfc</span>
     <span class="badge b-yellow">🚀 GitHub Actions (self-hosted)</span>
     <span class="badge b-purple">⚙ NSSM Windows service</span>
-    <span class="badge b-blue">🌐 Nginx → port 2000</span>
+    <span class="badge b-blue">🌐 Nginx → port 8090</span>
   </div>
 </div>
 
@@ -146,15 +146,15 @@ GitHub Actions runner #3 on EC2  (label "ap-engine", folder E:\APEngine\actions-
 E:\APEngine\app   ── Windows service "ap-engine" (NSSM) ── uvicorn 127.0.0.1:8200
         ▲                                                       │  RFC (pyrfc + C:\sap\nwrfcsdk)
         │ proxy                                                 ▼
-Nginx  :2000  (conf.d\ap-engine.conf)            SAP S/4HANA A4F  65.2.76.131 : 3357 (gateway 33‹57›)
+Nginx  :8090  (conf.d\ap-engine.conf)            SAP S/4HANA A4F  65.2.76.131 : 3357 (gateway 33‹57›)
         ▲
-Browser  http://13.207.66.222:2000</div>
+Browser  http://13.207.66.222:8090</div>
     <table>
       <tr><th>Port</th><th>Used by</th><th>Public?</th></tr>
       <tr><td><code>80</code></td><td>Existing apps (Nginx)</td><td>yes — untouched</td></tr>
       <tr><td><code>3000</code></td><td>Avagama frontend (Nginx)</td><td>yes — untouched</td></tr>
       <tr><td><code>5000</code></td><td>Avagama backend (PM2)</td><td>yes — untouched</td></tr>
-      <tr><td><code>2000</code></td><td><b>AP Engine</b> — Nginx proxy to the app (dashboard + API + review links)</td><td><b>yes — open in Step 10</b></td></tr>
+      <tr><td><code>8090</code></td><td><b>AP Engine</b> — Nginx proxy to the app (dashboard + API + review links)</td><td><b>yes — open in Step 10</b></td></tr>
       <tr><td><code>8200</code></td><td>AP Engine app itself (uvicorn), bound to 127.0.0.1 only</td><td>no — internal</td></tr>
     </table>
     <table>
@@ -193,9 +193,9 @@ Browser  http://13.207.66.222:2000</div>
 <section class="phase">
   <div class="phase-header"><div class="phase-number">1</div><div><h2>Phase 1 — Server setup (once)</h2><p>RDP into the EC2 and prepare it</p></div></div>
 
-  <div class="step" id="s1"><div class="step-header" onclick="toggle(this)"><div class="step-num">1</div><h3>Check ports 2000 and 8200 are free</h3><span class="where">EC2 · PowerShell</span><span class="step-arrow">▼</span></div>
+  <div class="step" id="s1"><div class="step-header" onclick="toggle(this)"><div class="step-num">1</div><h3>Check ports 8090 and 8200 are free</h3><span class="where">EC2 · PowerShell</span><span class="step-arrow">▼</span></div>
   <div class="step-body">
-    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>netstat -ano | findstr ":2000 :8200"</pre>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>netstat -ano | findstr ":8090 :8200"</pre>
     <p><b>Expected:</b> no output. If a line shows <code>LISTENING</code>, something already uses that port — tell the team before continuing (you can pick another internal port instead of 8200, but then change it in Steps 7–9 and in <code>deploy.yml</code> → <code>APP_PORT</code>).</p>
   </div></div>
 
@@ -276,14 +276,14 @@ Port 3357 already works from our office network; we need the same for this serve
       <tr><th>Manual (once)</th><th>Automatic on every push</th></tr>
       <tr><td>Steps 1–4 (ports, folders, Python 3.12, SAP SDK + VC++)<br>
         <b>.env</b>: either the GitHub secret <code>AP_ENV_FILE</code> (Step 12, option B — recommended) or the file <code>E:\APEngine\app\.env</code> (Step 6c)<br>
-        Step 10a (AWS security group, port 2000)<br>
+        Step 10a (AWS security group, port 8090)<br>
         Step 11 (the runner)<br>
         Step 5 request to SAP — last</td>
         <td>Copy code to <code>E:\APEngine\app</code> (6a)<br>venv + <code>pip install</code> + SAP SDK load check (7)<br>
-        Windows service <code>ap-engine</code> via NSSM (8)<br>Nginx site on port 2000 + reload (9)<br>Windows Firewall rule for 2000 (10b)<br>
+        Windows service <code>ap-engine</code> via NSSM (8)<br>Nginx site on port 8090 + reload (9)<br>Windows Firewall rule for 8090 (10b)<br>
         Start + health check</td></tr>
     </table>
-    Order: Steps 1–4 → 12 (secret) → 10a → 11 (runner) → push (Step 13) → check http://13.207.66.222:2000 → Step 5 request to SAP.
+    Order: Steps 1–4 → 12 (secret) → 10a → 11 (runner) → push (Step 13) → check http://13.207.66.222:8090 → Step 5 request to SAP.
     Steps 6–9 below remain as the manual way / for troubleshooting.
   </div>
 
@@ -317,7 +317,7 @@ SAP_FREIGHT_TAX_CODE=I0
 
 # ── App ─────────────────────────────────────────────────────
 AP_TRIGGER_SECRET=&lt;value from 6b&gt;
-AP_APPROVAL_PORTAL_URL=http://13.207.66.222:2000
+AP_APPROVAL_PORTAL_URL=http://13.207.66.222:8090
 VARIANCE_THRESHOLD_PCT=2.0
 
 # ── PDF reading (auto = AI first, rule-based reader as fallback)
@@ -375,7 +375,7 @@ nssm status ap-engine</pre>
     <div class="info"><span>ℹ</span><span>The app writes its log to <code>E:\APEngine\logs\ap-engine.err.log</code> (uvicorn logs to stderr — that's normal, not only errors).</span></div>
   </div></div>
 
-  <div class="step" id="s9"><div class="step-header" onclick="toggle(this)"><div class="step-num">9</div><h3>Nginx: publish the app on port 2000</h3><span class="where">EC2 · PowerShell</span><span class="step-arrow">▼</span></div>
+  <div class="step" id="s9"><div class="step-header" onclick="toggle(this)"><div class="step-num">9</div><h3>Nginx: publish the app on port 8090</h3><span class="where">EC2 · PowerShell</span><span class="step-arrow">▼</span></div>
   <div class="step-body">
     <div class="note"><span>⚠</span><span>Same pattern as Avagama: <b>do not edit nginx.conf</b> beyond the single <code>include conf.d/*.conf;</code> line that Avagama already added. The AP Engine gets its own file.</span></div>
     <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="c"># the include line must already exist (from Avagama setup):</span>
@@ -390,22 +390,25 @@ cd C:\nginx\nginx-1.30.0
 .\nginx.exe -s reload</pre>
     <p><code>nginx -t</code> must print <b>syntax is ok</b> and <b>test is successful</b> before you reload. If <code>-s reload</code> says <i>OpenEvent("Global
 gx_reload_…") failed (5: Access is denied)</i>, Nginx runs as an NSSM service under SYSTEM — use <code>nssm restart nginx</code> instead (a ~1 s blip for the other sites).</p>
-    <p>What the file does: listens on <b>2000</b>, proxies everything to <code>127.0.0.1:8200</code>, allows 25 MB PDF uploads, and waits up to 300 s (SAP posting and "Reset all demo cases" can be slow).</p>
-    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>Invoke-WebRequest http://localhost:2000 -UseBasicParsing | Select-Object StatusCode
+    <div class="note"><span>⚠</span><span><b>Why 8090 and not 2000?</b> TCP 2000 is the Cisco phone-signalling port (SCCP). Office
+    firewalls inspect it as phone traffic and drop normal web pages — the app answered on the server but browsers outside got
+    <code>ERR_EMPTY_RESPONSE</code>. 8090 is an ordinary web port.</span></div>
+    <p>What the file does: listens on <b>8090</b>, proxies everything to <code>127.0.0.1:8200</code>, allows 25 MB PDF uploads, and waits up to 300 s (SAP posting and "Reset all demo cases" can be slow).</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>Invoke-WebRequest http://localhost:8090 -UseBasicParsing | Select-Object StatusCode
 <span class="c"># Expected: 200</span></pre>
   </div></div>
 
-  <div class="step" id="s10"><div class="step-header" onclick="toggle(this)"><div class="step-num">10</div><h3>Open port 2000 (AWS + Windows Firewall)</h3><span class="where">AWS Console + EC2</span><span class="step-arrow">▼</span></div>
+  <div class="step" id="s10"><div class="step-header" onclick="toggle(this)"><div class="step-num">10</div><h3>Open port 8090 (AWS + Windows Firewall)</h3><span class="where">AWS Console + EC2</span><span class="step-arrow">▼</span></div>
   <div class="step-body">
     <h4>10a — AWS Security Group</h4>
     <p>AWS Console → EC2 → Instances → <b>i-0e3ed83842b7879d7</b> (public IP 13.207.66.222) → Security → Security group → <b>Edit inbound rules</b> → <b>Add rule</b>:</p>
     <table><tr><th>Type</th><th>Port</th><th>Source</th><th>Description</th></tr>
-      <tr><td>Custom TCP</td><td><code>2000</code></td><td>0.0.0.0/0 (or your office IPs)</td><td>AP Engine</td></tr></table>
+      <tr><td>Custom TCP</td><td><code>8090</code></td><td>0.0.0.0/0 (or your office IPs)</td><td>AP Engine</td></tr></table>
     <p>Do <b>not</b> open 8200 — it stays internal.</p>
     <h4>10b — Windows Firewall on the EC2</h4>
-    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>New-NetFirewallRule -DisplayName "AP Engine 2000" -Direction Inbound -Protocol TCP -LocalPort 2000 -Action Allow</pre>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>New-NetFirewallRule -DisplayName "AP Engine 8090" -Direction Inbound -Protocol TCP -LocalPort 8090 -Action Allow</pre>
     <h4>10c — Test from your laptop</h4>
-    <p>Open <b>http://13.207.66.222:2000</b> — the AP Engine dashboard with the green <b>Live SAP</b> bar.</p>
+    <p>Open <b>http://13.207.66.222:8090</b> — the AP Engine dashboard with the green <b>Live SAP</b> bar.</p>
   </div></div>
 </section>
 
@@ -483,14 +486,14 @@ cd E:\APEngine\actions-runner</pre>
       <tr><td>3</td><td>Copy code</td><td><code>robocopy</code> into <code>E:\APEngine\app</code> — keeps <code>.env</code>, <code>.venv</code>, logs</td></tr>
       <tr><td>4</td><td>Write .env</td><td>From secret <code>AP_ENV_FILE</code> if set, otherwise keeps the server's file</td></tr>
       <tr><td>5</td><td>Python environment</td><td>Creates <code>.venv</code> if missing, <code>pip install -r requirements-local.txt</code>, checks the SAP SDK loads (<code>import pyrfc</code>)</td></tr>
-      <tr><td>5b</td><td>One-time setup</td><td>Creates the <code>ap-engine</code> NSSM service, installs the Nginx site <code>conf.d\ap-engine.conf</code> (tests with <code>nginx -t</code> before reloading — a bad file is removed, other apps unaffected), adds the Windows Firewall rule for 2000. Each part is skipped when it already exists.</td></tr>
+      <tr><td>5b</td><td>One-time setup</td><td>Creates the <code>ap-engine</code> NSSM service, installs the Nginx site <code>conf.d\ap-engine.conf</code> (tests with <code>nginx -t</code> before reloading — a bad file is removed, other apps unaffected), adds the Windows Firewall rule for 8090. Each part is skipped when it already exists.</td></tr>
       <tr><td>6</td><td>Start the service</td><td><code>nssm start ap-engine</code> (runs even if an earlier step failed, so the app comes back)</td></tr>
       <tr><td>7</td><td>Health check</td><td>Calls <code>/api/sap/health</code>; fails the run if the app doesn't answer; warns if SAP is unreachable</td></tr>
     </table>
     <h4>Trigger the first automatic deploy</h4>
     <p>On your laptop (PowerShell in the project folder):</p>
     <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>git add .github/workflows/deploy.yml deploy/ec2/ap-engine.conf Docs/EC2_DEPLOYMENT_GUIDE.html
-git commit -m "EC2 deployment: GitHub Actions workflow, Nginx site on port 2000, deployment guide"
+git commit -m "EC2 deployment: GitHub Actions workflow, Nginx site on port 8090, deployment guide"
 git push sapagent main</pre>
     <p>GitHub → AP_Automation_Agent → <b>Actions</b> → "Deploy AP Engine" → all steps green. You can also re-run it any time with <b>Run workflow</b> (no code change needed).</p>
     <div class="note"><span>⚠</span><span>Push this only to <code>sapagent</code> (AP_Automation_Agent). If the workflow ever reaches the old <code>origin</code> repo, its job just waits forever for an <code>ap-engine</code> runner there — harmless, but cancel it.</span></div>
@@ -509,12 +512,12 @@ git push sapagent main</pre>
       <li><input type="checkbox"><span><code>py -3.12 --version</code> works</span></li>
       <li><input type="checkbox"><span><code>import pyrfc</code> works and <code>sap_connector.ping()</code> returns <b>ok: true, sysid A4F</b></span></li>
       <li><input type="checkbox"><span><code>nssm status ap-engine</code> → <b>SERVICE_RUNNING</b></span></li>
-      <li><input type="checkbox"><span><code>nginx -t</code> OK and <code>http://localhost:2000</code> returns 200 on the server</span></li>
-      <li><input type="checkbox"><span><b>http://13.207.66.222:2000</b> opens from your laptop with a green <b>Live SAP</b> bar</span></li>
+      <li><input type="checkbox"><span><code>nginx -t</code> OK and <code>http://localhost:8090</code> returns 200 on the server</span></li>
+      <li><input type="checkbox"><span><b>http://13.207.66.222:8090</b> opens from your laptop with a green <b>Live SAP</b> bar</span></li>
       <li><input type="checkbox"><span>Avagama still works: <code>http://13.207.66.222:3000</code> and <code>:5000</code> unchanged</span></li>
       <li><input type="checkbox"><span>Runner <b>ap-engine-ec2</b> shows <b>Idle</b> in GitHub</span></li>
       <li><input type="checkbox"><span>Push to <code>main</code> → Actions run <b>green</b> (all 7 steps)</span></li>
-      <li><input type="checkbox"><span>Demo: <b>Reset all demo cases</b> → Run S01 → <b>Posted in SAP</b>; Run S03 → <b>Parked</b> → Approve in review link (<code>…:2000/review/…</code>) → Posted</span></li>
+      <li><input type="checkbox"><span>Demo: <b>Reset all demo cases</b> → Run S01 → <b>Posted in SAP</b>; Run S03 → <b>Parked</b> → Approve in review link (<code>…:8090/review/…</code>) → Posted</span></li>
       <li><input type="checkbox"><span>Reboot test: restart the EC2 → ap-engine, nginx and the runner all come back on their own</span></li>
     </ul>
   </div></div>
@@ -561,9 +564,9 @@ cd E:\APEngine\app
       <tr><td><i>partner '65.2.76.131:3357' not reached</i></td><td>Network / firewall between EC2 and SAP</td><td>Step 5 must be True — ask SAP Basis to allow 13.207.66.222</td></tr>
       <tr><td><i>RFC_LOGON_FAILURE</i></td><td>Wrong <code>SAP_S4_USER/PASSWD</code>, or the user is locked</td><td>Fix <code>.env</code> → restart service; ask Basis to unlock (SU01)</td></tr>
       <tr><td><i>hostname … unknown</i></td><td>Using the old hostname</td><td><code>SAP_S4_ASHOST=65.2.76.131</code> (the IP)</td></tr>
-      <tr><td>Browser: <b>502 Bad Gateway</b> on :2000</td><td>App service not running</td><td><code>nssm status ap-engine</code>; read <code>ap-engine.err.log</code></td></tr>
+      <tr><td>Browser: <b>502 Bad Gateway</b> on :8090</td><td>App service not running</td><td><code>nssm status ap-engine</code>; read <code>ap-engine.err.log</code></td></tr>
       <tr><td>Browser: <b>504 Gateway Timeout</b></td><td>A long SAP call exceeded the proxy timeout</td><td>Check <code>proxy_read_timeout 300s</code> in <code>ap-engine.conf</code>; reload Nginx</td></tr>
-      <tr><td>:2000 not reachable from laptop</td><td>Security group or Windows Firewall</td><td>Step 10a and 10b</td></tr>
+      <tr><td>:8090 not reachable from laptop</td><td>Security group or Windows Firewall</td><td>Step 10a and 10b</td></tr>
       <tr><td>Workflow stuck in <b>Queued</b></td><td>Runner offline or label mismatch</td><td>Runner must be Idle with label <code>ap-engine</code>; restart its service</td></tr>
       <tr><td>Workflow: <i>Access denied</i> / nssm fails</td><td>Runner service runs as NETWORK SERVICE</td><td>Reconfigure with <code>--windowslogonaccount "NT AUTHORITY\SYSTEM"</code> (11c)</td></tr>
       <tr><td>Workflow: <i>py is not recognized</i></td><td>Python not installed for all users</td><td>Reinstall Python 3.12 "for all users" (Step 3), restart the runner service</td></tr>

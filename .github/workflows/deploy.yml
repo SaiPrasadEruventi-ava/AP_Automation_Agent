@@ -3,7 +3,7 @@
 # GitHub Actions runner on the EC2 copies the code into the deployment
 # folder and restarts the app.
 #
-#   http://13.207.66.222:2000  ->  Nginx (conf.d\ap-engine.conf)
+#   http://13.207.66.222:8090  ->  Nginx (conf.d\ap-engine.conf)
 #                              ->  uvicorn 127.0.0.1:8200  (NSSM service "ap-engine")
 #
 # One-time server setup (folders, Python, SAP NW RFC SDK, runner, NSSM,
@@ -27,7 +27,7 @@ env:
   SAPNWRFC_HOME: C:\sap\nwrfcsdk
   LOG_DIR: E:\APEngine\logs
   NGINX_DIR: C:\nginx\nginx-1.30.0
-  PUBLIC_PORT: "2000"
+  PUBLIC_PORT: "8090"
 
 jobs:
   deploy:
@@ -160,7 +160,7 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw "Creating the service failed - is nssm on PATH for the runner (SYSTEM)?" }
           } else { "Service $env:SERVICE already exists" }
 
-          # -- Nginx site on port 2000 (own file in conf.d - nginx.conf is not touched)
+          # -- Nginx site on port $env:PUBLIC_PORT (own file in conf.d - nginx.conf is not touched)
           $site = Join-Path $env:NGINX_DIR "conf\conf.d\ap-engine.conf"
           $src  = Join-Path $env:APP_DIR "deploy\ec2\ap-engine.conf"
           $conf = Get-Content (Join-Path $env:NGINX_DIR "conf\nginx.conf") -Raw -ErrorAction Stop
@@ -183,8 +183,11 @@ jobs:
           } else { "Nginx site unchanged" }
 
           # -- Windows Firewall: allow the public port (AWS security group is separate)
-          if (-not (Get-NetFirewallRule -DisplayName "AP Engine 2000" -ErrorAction SilentlyContinue)) {
-            New-NetFirewallRule -DisplayName "AP Engine 2000" -Direction Inbound -Protocol TCP -LocalPort $env:PUBLIC_PORT -Action Allow -ErrorAction Stop | Out-Null
+          # (an older rule for port 2000 is removed - the app moved to 8090)
+          Get-NetFirewallRule -DisplayName "AP Engine 2000" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+          $rule = "AP Engine $env:PUBLIC_PORT"
+          if (-not (Get-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue)) {
+            New-NetFirewallRule -DisplayName $rule -Direction Inbound -Protocol TCP -LocalPort $env:PUBLIC_PORT -Action Allow -ErrorAction Stop | Out-Null
             "Firewall rule created for port $env:PUBLIC_PORT"
           } else { "Firewall rule already exists" }
 
