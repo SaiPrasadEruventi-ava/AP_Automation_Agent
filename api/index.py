@@ -1419,10 +1419,10 @@ def _demo_panel_html() -> str:
         return ('<div class="panel"><div class="txt"><h2>SAP demo cases</h2><p>No demo cases set up '
                 'yet — run <code>python sap_demo_setup.py</code> on the server to create them in SAP.'
                 '</p></div></div>')
+    # No SAP call while rendering — the page must load instantly even when
+    # SAP is slow or unreachable. SAP-side statuses ("already posted in SAP")
+    # arrive a moment later through the /api/demo/status poll.
     states = _case_states()
-    for inv, d in _demo_invoices_in_sap([e.get("invoice_number") for e in reg.values()]).items():
-        states.setdefault(inv, (f"Already {d['status'].lower()} in SAP {d['document']} (earlier run) — "
-                                "click Reset before demoing", "warn"))
     rows = ""
     for scn in SCENARIOS:
         e = reg.get(scn["id"], {})
@@ -1622,6 +1622,8 @@ function setCaseStatus() { refreshCaseStatus(); }
 // Approvals / rejections happen in the review tab — keep this page current.
 setInterval(() => { if (!document.hidden) { refreshCaseStatus(); refreshStats(); } }, 5000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { refreshCaseStatus(); refreshStats(); } });
+refreshCaseStatus();  // first fill right after the page loads (the page itself renders without SAP calls)
+refreshCaseStatus();  // first fill right after the page loads
 
 function lockButtons(row, on) { if (row) row.querySelectorAll('button').forEach(b => b.disabled = on); }
 

@@ -234,12 +234,42 @@ def strip_alpha(value: str) -> str:
 _local = threading.local()
 
 
-def connect(system: str = None):
-    """Open a NEW connection (caller closes it)."""
+# When SAP's gateway is unreachable every logon attempt hangs ~21 s in the
+# SDK's TCP connect. Remember the failure briefly so pages and pollers get
+# an immediate answer instead of each waiting 21 s (observed on the RPA
+# server before SAP Basis had opened port 3357: the dashboard froze and
+# browsers gave up with ERR_EMPTY_RESPONSE). ping() bypasses this, so the
+# health check notices as soon as SAP is reachable again.
+UNREACHABLE_COOLDOWN = int(os.getenv("SAP_UNREACHABLE_COOLDOWN", "60"))
+_down = {}            # system -> (until_ts, message)
+_down_lock = threading.Lock()
+
+
+def _mark_down(system: str, message: str) -> None:
+    with _down_lock:
+        _down[system] = (time.time() + UNREACHABLE_COOLDOWN, message)
+
+
+def _check_down(system: str) -> None:
+    with _down_lock:
+        until, message = _down.get(system, (0, ""))
+    if time.time() < until:
+        raise SapError(message)
+
+
+def connect(system: str = None, force: bool = False):
+    """Open a NEW connection (caller closes it). Raises SapError at once
+    while SAP is known to be unreachable, unless `force`."""
     pyrfc = _pyrfc()
+    system = (system or active_system()).upper()
     cfg = _cfg(system)
+    if not force:
+        _check_down(system)
     try:
-        return pyrfc.Connection(**cfg)
+        conn = pyrfc.Connection(**cfg)
+        with _down_lock:
+            _down.pop(system, None)
+        return conn
     except pyrfc.LogonError as e:
         raise SapError(f"SAP logon failed for user {cfg['user']} "
                        f"(client {cfg['client']}): {e.message}") from e
@@ -247,8 +277,9 @@ def connect(system: str = None):
         # The SDK message is a multi-line NI trace; its ERROR line says it all.
         lines = [l.strip() for l in e.message.splitlines() if l.strip().startswith("ERROR")]
         detail = lines[0][5:].strip() if lines else e.message.strip()[:200]
-        raise SapError(f"Cannot reach SAP at {cfg['ashost']} "
-                       f"(instance {cfg['sysnr']}): {detail}") from e
+        message = f"Cannot reach SAP at {cfg['ashost']} (instance {cfg['sysnr']}): {detail}"
+        _mark_down(system, message)
+        raise SapError(message) from e
 
 
 @contextmanager
@@ -492,7 +523,7 @@ def ping(system: str = None) -> dict:
         return {**info, "ok": False}
     started = time.time()
     try:
-        conn = connect(system)
+        conn = connect(system, force=True)
         try:
             attrs = conn.get_connection_attributes()
             si = call(conn, "RFC_SYSTEM_INFO")["RFCSI_EXPORT"]
