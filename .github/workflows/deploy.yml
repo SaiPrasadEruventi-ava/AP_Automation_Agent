@@ -41,6 +41,10 @@ jobs:
       - name: Stop the app (service + any leftover process)
         shell: powershell
         run: |
+          # The runner prepends $ErrorActionPreference='stop'; with it, Windows PowerShell 5.1
+          # turns ANY stderr line of a native tool (nssm, pip, nginx) into a fatal error.
+          # Use normal handling and check exit codes explicitly instead.
+          $ErrorActionPreference = 'Continue'
           # The app is a Python process run by NSSM (Avagama's Node app uses
           # PM2 instead). Stop it BEFORE copying: Windows cannot replace a
           # .py/.pyd file a running process has loaded, and port 8200 must be
@@ -53,7 +57,7 @@ jobs:
           }
           # Kill anything still running from the app's venv (e.g. a manual
           # "uvicorn ..." test run started by hand over RDP).
-          $venv = Join-Path $env:APP_DIR ".venv"
+          $venv = [IO.Path]::Combine($env:APP_DIR, ".venv")
           Get-CimInstance Win32_Process -Filter "Name='python.exe'" |
             Where-Object { $_.ExecutablePath -and $_.ExecutablePath.StartsWith($venv, [StringComparison]::OrdinalIgnoreCase) } |
             ForEach-Object { "Stopping leftover PID $($_.ProcessId)"; Stop-Process -Id $_.ProcessId -Force }
@@ -66,6 +70,10 @@ jobs:
       - name: Copy code to the deployment folder
         shell: powershell
         run: |
+          # The runner prepends $ErrorActionPreference='stop'; with it, Windows PowerShell 5.1
+          # turns ANY stderr line of a native tool (nssm, pip, nginx) into a fatal error.
+          # Use normal handling and check exit codes explicitly instead.
+          $ErrorActionPreference = 'Continue'
           # .env, the venv, logs and runtime output on the server are kept.
           robocopy . $env:APP_DIR /E /XD .git .github .venv __pycache__ logs /XF .env dev_rfc*.log *.trc /NFL /NDL /NJH /NJS /NP
           if ($LASTEXITCODE -ge 8) { throw "robocopy failed ($LASTEXITCODE)" }
@@ -76,10 +84,14 @@ jobs:
         env:
           AP_ENV_FILE: ${{ secrets.AP_ENV_FILE }}
         run: |
+          # The runner prepends $ErrorActionPreference='stop'; with it, Windows PowerShell 5.1
+          # turns ANY stderr line of a native tool (nssm, pip, nginx) into a fatal error.
+          # Use normal handling and check exit codes explicitly instead.
+          $ErrorActionPreference = 'Continue'
           $target = Join-Path $env:APP_DIR ".env"
           if ($env:AP_ENV_FILE) {
             # WriteAllText = UTF-8 without BOM (a BOM breaks the first variable)
-            [IO.File]::WriteAllText($target, $env:AP_ENV_FILE)
+            [IO.File]::WriteAllText($target, $env:AP_ENV_FILE)  # .NET call: throws on failure
             "Wrote .env from the AP_ENV_FILE secret"
           } elseif (Test-Path $target) {
             "Using the existing .env on the server"
@@ -90,9 +102,17 @@ jobs:
       - name: Python environment + dependencies
         shell: powershell
         run: |
+          # The runner prepends $ErrorActionPreference='stop'; with it, Windows PowerShell 5.1
+          # turns ANY stderr line of a native tool (nssm, pip, nginx) into a fatal error.
+          # Use normal handling and check exit codes explicitly instead.
+          $ErrorActionPreference = 'Continue'
           Set-Location $env:APP_DIR
-          if (-not (Test-Path .venv\Scripts\python.exe)) { py -3.12 -m venv .venv }
+          if (-not (Test-Path .venv\Scripts\python.exe)) {
+            py -3.12 -m venv .venv
+            if ($LASTEXITCODE -ne 0) { throw "Could not create the venv - is Python 3.12 installed for all users? (guide step 3)" }
+          }
           .\.venv\Scripts\python.exe -m pip install --upgrade pip --quiet --disable-pip-version-check
+          if ($LASTEXITCODE -ne 0) { throw "pip upgrade failed" }
           .\.venv\Scripts\python.exe -m pip install -r requirements-local.txt --quiet --disable-pip-version-check
           if ($LASTEXITCODE -ne 0) { throw "pip install failed" }
           # Proves the SAP NW RFC SDK DLLs load (no SAP call made here)
@@ -102,6 +122,10 @@ jobs:
       - name: One-time setup (service, Nginx site, firewall) - skipped when already done
         shell: powershell
         run: |
+          # The runner prepends $ErrorActionPreference='stop'; with it, Windows PowerShell 5.1
+          # turns ANY stderr line of a native tool (nssm, pip, nginx) into a fatal error.
+          # Use normal handling and check exit codes explicitly instead.
+          $ErrorActionPreference = 'Continue'
           # -- Windows service "ap-engine" (uvicorn on 127.0.0.1:8200, run by NSSM)
           New-Item -ItemType Directory -Force -Path $env:LOG_DIR | Out-Null
           nssm status $env:SERVICE 2>$null | Out-Null
@@ -117,19 +141,21 @@ jobs:
             nssm set $env:SERVICE AppRotateBytes 10485760
             nssm set $env:SERVICE Start SERVICE_AUTO_START
             nssm set $env:SERVICE DisplayName "AP Engine (SAP 3-way match)"
+            nssm status $env:SERVICE 2>$null | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw "Creating the service failed - is nssm on PATH for the runner (SYSTEM)?" }
           } else { "Service $env:SERVICE already exists" }
 
           # -- Nginx site on port 2000 (own file in conf.d - nginx.conf is not touched)
           $site = Join-Path $env:NGINX_DIR "conf\conf.d\ap-engine.conf"
           $src  = Join-Path $env:APP_DIR "deploy\ec2\ap-engine.conf"
-          $conf = Get-Content (Join-Path $env:NGINX_DIR "conf\nginx.conf") -Raw
+          $conf = Get-Content (Join-Path $env:NGINX_DIR "conf\nginx.conf") -Raw -ErrorAction Stop
           if ($conf -notmatch "include\s+conf\.d/\*\.conf") {
             throw "nginx.conf has no 'include conf.d/*.conf;' line - add it once by hand (guide step 9)"
           }
           $changed = -not (Test-Path $site) -or ((Get-FileHash $src).Hash -ne (Get-FileHash $site).Hash)
           if ($changed) {
             New-Item -ItemType Directory -Force -Path (Split-Path $site) | Out-Null
-            Copy-Item $src $site -Force
+            Copy-Item $src $site -Force -ErrorAction Stop
             Push-Location $env:NGINX_DIR
             .\nginx.exe -t
             if ($LASTEXITCODE -ne 0) { Pop-Location; Remove-Item $site; throw "nginx -t failed - site file removed, other apps unaffected" }
@@ -143,7 +169,7 @@ jobs:
 
           # -- Windows Firewall: allow the public port (AWS security group is separate)
           if (-not (Get-NetFirewallRule -DisplayName "AP Engine 2000" -ErrorAction SilentlyContinue)) {
-            New-NetFirewallRule -DisplayName "AP Engine 2000" -Direction Inbound -Protocol TCP -LocalPort $env:PUBLIC_PORT -Action Allow | Out-Null
+            New-NetFirewallRule -DisplayName "AP Engine 2000" -Direction Inbound -Protocol TCP -LocalPort $env:PUBLIC_PORT -Action Allow -ErrorAction Stop | Out-Null
             "Firewall rule created for port $env:PUBLIC_PORT"
           } else { "Firewall rule already exists" }
 
@@ -151,6 +177,10 @@ jobs:
         if: always()
         shell: powershell
         run: |
+          # The runner prepends $ErrorActionPreference='stop'; with it, Windows PowerShell 5.1
+          # turns ANY stderr line of a native tool (nssm, pip, nginx) into a fatal error.
+          # Use normal handling and check exit codes explicitly instead.
+          $ErrorActionPreference = 'Continue'
           # Runs even after a failed step so an existing app comes back up.
           nssm status $env:SERVICE 2>$null | Out-Null
           if ($LASTEXITCODE -ne 0) {
@@ -165,10 +195,14 @@ jobs:
       - name: Health check (app + live SAP)
         shell: powershell
         run: |
+          # The runner prepends $ErrorActionPreference='stop'; with it, Windows PowerShell 5.1
+          # turns ANY stderr line of a native tool (nssm, pip, nginx) into a fatal error.
+          # Use normal handling and check exit codes explicitly instead.
+          $ErrorActionPreference = 'Continue'
           $ok = $false
           foreach ($i in 1..6) {
             try {
-              $h = Invoke-RestMethod "http://127.0.0.1:$($env:APP_PORT)/api/sap/health" -TimeoutSec 40
+              $h = Invoke-RestMethod "http://127.0.0.1:$($env:APP_PORT)/api/sap/health" -TimeoutSec 40 -ErrorAction Stop
               $h | ConvertTo-Json -Compress
               $ok = $true; break
             } catch { "waiting for the app... ($i)"; Start-Sleep -Seconds 5 }
