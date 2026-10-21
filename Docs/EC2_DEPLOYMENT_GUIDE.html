@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AP Engine — EC2 Deployment Guide</title>
+<style>
+  :root {
+    --bg:#0f1117; --surface:#1a1d27; --surface2:#22263a; --border:#2e3350;
+    --accent:#5b8dee; --accent2:#7c3aed; --green:#22c55e; --yellow:#f59e0b; --red:#ef4444;
+    --text:#e2e8f0; --muted:#8892a4; --code-bg:#0d1117;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--text); line-height:1.7; }
+  .sidebar { position:fixed; top:0; left:0; width:270px; height:100vh; background:var(--surface);
+    border-right:1px solid var(--border); overflow-y:auto; padding:24px 0; z-index:100; }
+  .sidebar-logo { padding:0 20px 18px; border-bottom:1px solid var(--border); margin-bottom:14px; }
+  .sidebar-logo h2 { font-size:16px; color:var(--accent); font-weight:700; }
+  .sidebar-logo p { font-size:11px; color:var(--muted); margin-top:4px; }
+  .nav-section { padding:10px 20px 4px; font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--muted); font-weight:600; }
+  .nav-link { display:block; padding:6px 20px; font-size:13px; color:var(--muted); text-decoration:none; border-left:2px solid transparent; }
+  .nav-link:hover { color:var(--text); background:var(--surface2); border-left-color:var(--accent); }
+  .main { margin-left:270px; padding:44px 56px; max-width:1120px; }
+  .hero { background:linear-gradient(135deg,var(--surface2),var(--surface)); border:1px solid var(--border);
+    border-radius:12px; padding:34px 40px; margin-bottom:44px; }
+  .hero h1 { font-size:27px; font-weight:800; color:#fff; margin-bottom:8px; }
+  .hero p { color:var(--muted); font-size:15px; max-width:760px; margin:0; }
+  .badges { display:flex; flex-wrap:wrap; gap:8px; margin-top:18px; }
+  .badge { padding:4px 12px; border-radius:999px; font-size:12px; font-weight:600; border:1px solid; }
+  .b-blue { background:rgba(91,141,238,.12); color:var(--accent); border-color:rgba(91,141,238,.3); }
+  .b-green { background:rgba(34,197,94,.12); color:var(--green); border-color:rgba(34,197,94,.3); }
+  .b-yellow { background:rgba(245,158,11,.12); color:var(--yellow); border-color:rgba(245,158,11,.3); }
+  .b-purple { background:rgba(124,58,237,.12); color:#a78bfa; border-color:rgba(124,58,237,.3); }
+  .phase { margin-bottom:52px; }
+  .phase-header { display:flex; align-items:center; gap:14px; margin-bottom:24px; padding-bottom:14px; border-bottom:1px solid var(--border); }
+  .phase-number { width:40px; height:40px; background:linear-gradient(135deg,var(--accent),var(--accent2)); border-radius:10px;
+    display:flex; align-items:center; justify-content:center; font-size:16px; font-weight:800; color:#fff; flex-shrink:0; }
+  .phase-header h2 { font-size:20px; font-weight:700; color:#fff; }
+  .phase-header p { font-size:13px; color:var(--muted); margin:2px 0 0; }
+  .step { background:var(--surface); border:1px solid var(--border); border-radius:10px; margin-bottom:18px; overflow:hidden; scroll-margin-top:16px; }
+  .step-header { display:flex; align-items:center; gap:12px; padding:14px 20px; background:var(--surface2);
+    border-bottom:1px solid var(--border); cursor:pointer; user-select:none; }
+  .step-num { min-width:28px; height:26px; padding:0 6px; background:var(--accent); border-radius:6px; display:flex; align-items:center;
+    justify-content:center; font-size:12px; font-weight:700; color:#fff; }
+  .step-header h3 { font-size:14px; font-weight:600; color:#fff; flex:1; }
+  .where { font-size:11px; color:var(--muted); border:1px solid var(--border); border-radius:999px; padding:1px 9px; }
+  .step-arrow { color:var(--muted); font-size:12px; transition:transform .2s; }
+  .step-body { padding:20px; }
+  .step-body.collapsed { display:none; }
+  p { margin-bottom:12px; font-size:14px; color:var(--muted); }
+  p b, li b, td b { color:var(--text); }
+  ul.plain { margin:0 0 14px 20px; font-size:14px; color:var(--muted); }
+  ul.plain li { margin:4px 0; }
+  pre { background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:16px 20px; overflow-x:auto;
+    font-family:'Cascadia Code','Consolas',monospace; font-size:13px; line-height:1.6; color:#c9d1d9; margin-bottom:16px; position:relative; }
+  .copy-btn { position:absolute; top:10px; right:10px; background:var(--surface2); border:1px solid var(--border); color:var(--muted);
+    font-size:11px; padding:3px 10px; border-radius:4px; cursor:pointer; }
+  .copy-btn:hover { color:var(--text); border-color:var(--accent); }
+  .c { color:#6a9955; }
+  .note, .info, .danger, .ok { display:flex; gap:10px; border-radius:8px; padding:12px 16px; margin-bottom:16px; font-size:13px; }
+  .note { background:rgba(245,158,11,.08); border:1px solid rgba(245,158,11,.25); color:var(--yellow); }
+  .info { background:rgba(91,141,238,.08); border:1px solid rgba(91,141,238,.25); color:var(--accent); }
+  .danger { background:rgba(239,68,68,.1); border:1px solid rgba(239,68,68,.4); color:#f87171; }
+  .ok { background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.3); color:var(--green); }
+  table { width:100%; border-collapse:collapse; margin-bottom:16px; font-size:13px; }
+  th { background:var(--surface2); color:var(--muted); text-align:left; padding:9px 13px; font-size:11px; text-transform:uppercase; letter-spacing:.5px; border-bottom:1px solid var(--border); }
+  td { padding:9px 13px; border-bottom:1px solid var(--border); color:var(--text); vertical-align:top; }
+  tr:last-child td { border-bottom:none; }
+  code { background:var(--code-bg); border:1px solid var(--border); border-radius:4px; padding:1px 6px; font-size:12px;
+    font-family:'Cascadia Code',monospace; color:#79c0ff; }
+  h4 { font-size:13px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:.5px; margin:20px 0 10px; }
+  h4:first-child { margin-top:0; }
+  .flow { font-family:'Cascadia Code',monospace; font-size:12.5px; color:#c9d1d9; background:var(--code-bg); border:1px solid var(--border);
+    border-radius:8px; padding:16px 20px; margin-bottom:16px; white-space:pre; overflow-x:auto; }
+  .checklist { list-style:none; }
+  .checklist li { display:flex; gap:10px; padding:8px 0; border-bottom:1px solid var(--border); font-size:14px; }
+  .checklist li:last-child { border-bottom:none; }
+  .checklist input { margin-top:4px; width:16px; height:16px; accent-color:var(--green); flex-shrink:0; }
+  .checklist input:checked + span { text-decoration:line-through; color:var(--muted); }
+  .bar { background:var(--surface2); border-radius:999px; height:6px; margin-bottom:6px; overflow:hidden; }
+  .bar div { height:6px; background:linear-gradient(90deg,var(--accent),var(--accent2)); width:0; transition:width .4s; }
+  .bar-label { font-size:12px; color:var(--muted); margin-bottom:18px; }
+  kbd { background:#333; padding:1px 6px; border-radius:4px; font-size:11px; }
+  @media (max-width:900px) { .sidebar { display:none; } .main { margin-left:0; padding:24px 16px; } }
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <h2>AP Engine Deployment</h2>
+    <p>EC2 Windows · GitHub Actions · SAP RFC · port 2000</p>
+  </div>
+  <div class="nav-section">Overview</div>
+  <a class="nav-link" href="#overview">Architecture &amp; ports</a>
+  <a class="nav-link" href="#before">0. Before you start</a>
+  <div class="nav-section">Phase 1 — Server setup (once)</div>
+  <a class="nav-link" href="#s1">1. Check ports are free</a>
+  <a class="nav-link" href="#s2">2. Create folders</a>
+  <a class="nav-link" href="#s3">3. Install Python 3.12</a>
+  <a class="nav-link" href="#s4">4. Install SAP NW RFC SDK</a>
+  <a class="nav-link" href="#s5">5. Test network to SAP</a>
+  <div class="nav-section">Phase 2 — First deploy (once)</div>
+  <a class="nav-link" href="#s6">6. Clone code + .env</a>
+  <a class="nav-link" href="#s7">7. Python venv + test run</a>
+  <a class="nav-link" href="#s8">8. Windows service (NSSM)</a>
+  <a class="nav-link" href="#s9">9. Nginx on port 2000</a>
+  <a class="nav-link" href="#s10">10. Open port 2000</a>
+  <div class="nav-section">Phase 3 — CI/CD</div>
+  <a class="nav-link" href="#s11">11. GitHub runner #3</a>
+  <a class="nav-link" href="#s12">12. GitHub secret (optional)</a>
+  <a class="nav-link" href="#s13">13. deploy.yml workflow</a>
+  <div class="nav-section">Verify &amp; operate</div>
+  <a class="nav-link" href="#checklist">Final checklist</a>
+  <a class="nav-link" href="#ops">Day-to-day commands</a>
+  <a class="nav-link" href="#trouble">Troubleshooting</a>
+</nav>
+
+<main class="main">
+
+<div class="hero">
+  <h1>AP Engine — EC2 Deployment Guide</h1>
+  <p>Deploys the SAP-integrated AP 3-Way Match engine (Python / FastAPI) to the same EC2 Windows Server that runs Avagama,
+  using the same pattern: a GitHub Actions self-hosted runner on the server, Nginx in front, and an auto-starting Windows service.
+  Public URL: <b>http://13.207.66.222:2000</b>.</p>
+  <div class="badges">
+    <span class="badge b-blue">🐍 Python 3.12 + FastAPI</span>
+    <span class="badge b-green">🏦 SAP NW RFC SDK 7.50 + pyrfc</span>
+    <span class="badge b-yellow">🚀 GitHub Actions (self-hosted)</span>
+    <span class="badge b-purple">⚙ NSSM Windows service</span>
+    <span class="badge b-blue">🌐 Nginx → port 2000</span>
+  </div>
+</div>
+
+<!-- OVERVIEW -->
+<section class="phase" id="overview">
+  <div class="phase-header"><div class="phase-number">📋</div><div><h2>Architecture &amp; ports</h2><p>What runs where on the EC2 server</p></div></div>
+  <div class="step"><div class="step-header" onclick="toggle(this)"><div class="step-num">i</div><h3>How it fits next to Avagama</h3><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+<div class="flow">git push → GitHub repo  SaiPrasadEruventi-ava/AP_Automation_Agent  (branch main)
+        │
+        ▼  .github/workflows/deploy.yml
+GitHub Actions runner #3 on EC2  (label "ap-engine", folder E:\APEngine\actions-runner)
+        │  stop service → copy code → pip install → start service → health check
+        ▼
+E:\APEngine\app   ── Windows service "ap-engine" (NSSM) ── uvicorn 127.0.0.1:8200
+        ▲                                                       │  RFC (pyrfc + C:\sap\nwrfcsdk)
+        │ proxy                                                 ▼
+Nginx  :2000  (conf.d\ap-engine.conf)            SAP S/4HANA A4F  65.2.76.131 : 3357 (gateway 33‹57›)
+        ▲
+Browser  http://13.207.66.222:2000</div>
+    <table>
+      <tr><th>Port</th><th>Used by</th><th>Public?</th></tr>
+      <tr><td><code>80</code></td><td>Existing apps (Nginx)</td><td>yes — untouched</td></tr>
+      <tr><td><code>3000</code></td><td>Avagama frontend (Nginx)</td><td>yes — untouched</td></tr>
+      <tr><td><code>5000</code></td><td>Avagama backend (PM2)</td><td>yes — untouched</td></tr>
+      <tr><td><code>2000</code></td><td><b>AP Engine</b> — Nginx proxy to the app (dashboard + API + review links)</td><td><b>yes — open in Step 10</b></td></tr>
+      <tr><td><code>8200</code></td><td>AP Engine app itself (uvicorn), bound to 127.0.0.1 only</td><td>no — internal</td></tr>
+    </table>
+    <table>
+      <tr><th>Item</th><th>Value</th></tr>
+      <tr><td>Deployment folder</td><td><code>E:\APEngine\app</code></td></tr>
+      <tr><td>Logs</td><td><code>E:\APEngine\logs</code></td></tr>
+      <tr><td>GitHub runner</td><td><code>E:\APEngine\actions-runner</code> (third runner, label <code>ap-engine</code>)</td></tr>
+      <tr><td>SAP NW RFC SDK</td><td><code>C:\sap\nwrfcsdk</code></td></tr>
+      <tr><td>Windows service</td><td><code>ap-engine</code> (NSSM)</td></tr>
+      <tr><td>Nginx site file</td><td><code>C:\nginx\nginx-1.30.0\conf\conf.d\ap-engine.conf</code> (copy of <code>deploy\ec2\ap-engine.conf</code> in the repo)</td></tr>
+      <tr><td>Workflow</td><td><code>.github\workflows\deploy.yml</code> (already in the repo)</td></tr>
+    </table>
+    <div class="info"><span>ℹ</span><span>Why not PM2 like Avagama? PM2 is for Node apps. This app is Python, so it runs as a Windows service via <b>NSSM</b> (already installed for Nginx) — it auto-starts on reboot and restarts if it crashes.</span></div>
+  </div></div>
+</section>
+
+<!-- BEFORE -->
+<section class="phase" id="before">
+  <div class="phase-header"><div class="phase-number">0</div><div><h2>Before you start</h2><p>Things you need in hand — some come from other people</p></div></div>
+  <div class="step"><div class="step-header" onclick="toggle(this)"><div class="step-num">0</div><h3>Prerequisites</h3><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <table>
+      <tr><th>What</th><th>Where to get it</th></tr>
+      <tr><td><b>RDP admin login</b> to the EC2 (the Avagama server, public IP <b>13.207.66.222</b>)</td><td>Same as for Avagama</td></tr>
+      <tr><td><b>SAP SDK zip</b> <code>nwrfc750P_17-70002755.zip</code></td><td>Your laptop: <code>D:\Agents\Avagama Agents\AP Payment Engine\Docs\</code> — it is NOT in GitHub (SAP-licensed). Copy it over RDP (Step 4).</td></tr>
+      <tr><td><b>SAP RFC user + password</b> (RPA / client 100)</td><td>Your laptop's <code>.env</code> — goes into the server's <code>.env</code> (Step 6)</td></tr>
+      <tr><td><b>Network from EC2 → SAP</b> port <code>3357</code> on 65.2.76.131</td><td>Tested in Step 5. If blocked, ask SAP Basis / the SAP server's AWS owner to allow the EC2's public IP <b>13.207.66.222</b> on TCP 3357.</td></tr>
+      <tr><td><b>GitHub admin</b> on <code>SaiPrasadEruventi-ava/AP_Automation_Agent</code></td><td>Needed to create the runner (Step 11) and secrets (Step 12)</td></tr>
+      <tr><td>Optional: <b>Mistral API key</b> (PDF reading), <b>Upstash Redis</b> (persistent logs), mail settings</td><td>Without them the app still works: rule-based PDF reader, in-memory logs (reset on restart), result emails saved as HTML files</td></tr>
+    </table>
+    <div class="danger"><span>🚨</span><span><b>Always use PowerShell as Administrator</b> on the server (<kbd>Win</kbd> → type PowerShell → right-click → Run as Administrator). Run commands <b>one block at a time</b> and check the result before moving on.</span></div>
+  </div></div>
+</section>
+
+<!-- PHASE 1 -->
+<section class="phase">
+  <div class="phase-header"><div class="phase-number">1</div><div><h2>Phase 1 — Server setup (once)</h2><p>RDP into the EC2 and prepare it</p></div></div>
+
+  <div class="step" id="s1"><div class="step-header" onclick="toggle(this)"><div class="step-num">1</div><h3>Check ports 2000 and 8200 are free</h3><span class="where">EC2 · PowerShell</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>netstat -ano | findstr ":2000 :8200"</pre>
+    <p><b>Expected:</b> no output. If a line shows <code>LISTENING</code>, something already uses that port — tell the team before continuing (you can pick another internal port instead of 8200, but then change it in Steps 7–9 and in <code>deploy.yml</code> → <code>APP_PORT</code>).</p>
+  </div></div>
+
+  <div class="step" id="s2"><div class="step-header" onclick="toggle(this)"><div class="step-num">2</div><h3>Create the folders</h3><span class="where">EC2 · PowerShell</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>mkdir E:\APEngine
+mkdir E:\APEngine\logs
+mkdir E:\APEngine\actions-runner
+mkdir C:\sap</pre>
+    <p><code>E:\APEngine\app</code> is created by <code>git clone</code> in Step 6 — don't create it now.</p>
+  </div></div>
+
+  <div class="step" id="s3"><div class="step-header" onclick="toggle(this)"><div class="step-num">3</div><h3>Install Python 3.12 (64-bit, for all users)</h3><span class="where">EC2 · browser + installer</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <p>Download <b>Python 3.12.x — Windows installer (64-bit)</b> from <b>https://www.python.org/downloads/windows/</b>. In the installer:</p>
+    <ul class="plain">
+      <li>Tick <b>Use admin privileges when installing py.exe</b> and <b>Add python.exe to PATH</b></li>
+      <li>Click <b>Customize installation</b> → Next → tick <b>Install Python 3.12 for all users</b> (installs to <code>C:\Program Files\Python312</code>) → Install</li>
+    </ul>
+    <div class="note"><span>⚠</span><span>Use <b>3.12</b> — the SAP binding <code>pyrfc 3.3.1</code> has Windows builds up to Python 3.12. "For all users" matters: the GitHub runner runs as a Windows service and must find Python.</span></div>
+    <p>Close and reopen PowerShell, then verify:</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>py -3.12 --version
+<span class="c"># Expected: Python 3.12.x</span></pre>
+    <p>Git is already on the server (Avagama). Check with <code>git --version</code>.</p>
+  </div></div>
+
+  <div class="step" id="s4"><div class="step-header" onclick="toggle(this)"><div class="step-num">4</div><h3>Install the SAP NetWeaver RFC SDK 7.50</h3><span class="where">EC2 · RDP copy + PowerShell</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <h4>4a — Copy the zip to the server</h4>
+    <p>On your laptop, copy <code>Docs\nwrfc750P_17-70002755.zip</code> (Ctrl+C in File Explorer). In the RDP session, open File Explorer → <code>C:\sap</code> → paste (Ctrl+V). RDP copies files through the clipboard.</p>
+    <div class="note"><span>⚠</span><span>If paste doesn't work: in the Remote Desktop app → Show Options → Local Resources → Clipboard ticked (and/or More… → Drives) → reconnect.</span></div>
+
+    <h4>4b — Extract it</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>Expand-Archive -Path C:\sap\nwrfc750P_17-70002755.zip -DestinationPath C:\sap -Force
+dir C:\sap\nwrfcsdk\lib</pre>
+    <p><b>Expected:</b> <code>sapnwrfc.dll</code>, <code>libsapucum.dll</code>, <code>icudt57.dll</code>, <code>icuin57.dll</code>, <code>icuuc57.dll</code> listed.</p>
+
+    <h4>4c — Environment variables (machine level)</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>[Environment]::SetEnvironmentVariable("SAPNWRFC_HOME", "C:\sap\nwrfcsdk", "Machine")
+$p = [Environment]::GetEnvironmentVariable("Path", "Machine")
+if ($p -notlike "*C:\sap\nwrfcsdk\lib*") { [Environment]::SetEnvironmentVariable("Path", $p + ";C:\sap\nwrfcsdk\lib", "Machine") }</pre>
+
+    <h4>4d — Visual C++ 2013 runtime (x64)</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>Test-Path C:\Windows\System32\msvcr120.dll
+<span class="c"># True  → already installed, skip.   False → install it:</span></pre>
+    <p>If <code>False</code>: download <b>vcredist_x64.exe</b> from Microsoft — "Visual C++ Redistributable Packages for Visual Studio 2013" (<b>https://www.microsoft.com/en-us/download/details.aspx?id=40784</b>) and install it. Without it, loading <code>sapnwrfc.dll</code> fails with a "module not found" error.</p>
+    <div class="info"><span>ℹ</span><span>Close and reopen PowerShell so the new variables apply. The actual load test happens in Step 7 (<code>import pyrfc</code>).</span></div>
+  </div></div>
+
+  <div class="step" id="s5"><div class="step-header" onclick="toggle(this)"><div class="step-num">5</div><h3>Test the network path from EC2 to SAP — <span style="color:#f59e0b">request access LAST</span></h3><span class="where">EC2 · PowerShell</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>Test-NetConnection 65.2.76.131 -Port 3357
+<span class="c"># Must show:  TcpTestSucceeded : True</span></pre>
+    <p>3357 is the SAP RFC gateway of instance 57 (33 + instance number). If it says <b>False</b>, the SAP server does not accept connections from this EC2 — ask SAP Basis / the SAP server's AWS owner to allow <b>13.207.66.222</b> (TCP 3357) in its security group / firewall. Nothing else in this guide can work around that.</p>
+    <div class="note"><span>⚠</span><span>Seen on this server: <code>TcpTestSucceeded : False</code> (ping also fails — ignore ping, AWS blocks it). Port 3357 works from the office laptop, so the SAP server only accepts known IPs.</span></div>
+    <h4>Confirm the public IP this server uses to go out</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>Invoke-RestMethod https://checkip.amazonaws.com
+<span class="c"># expected: 13.207.66.222 — the IP SAP must allow</span></pre>
+    <h4>Request to SAP Basis / the SAP server owner</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>Please allow inbound TCP port 3357 (RFC gateway, instance 57) on the SAP server
+65.2.76.131 (A4F, S/4HANA) from our application server's public IP 13.207.66.222.
+The AP Automation app connects over RFC as user RPA, client 100.
+Port 3357 already works from our office network; we need the same for this server.</pre>
+    <div class="ok"><span>✓</span><span><b>Plan:</b> send this request at the very end, after Steps 6–13 are done. Until SAP allows the IP, the app runs normally
+    but shows <i>"SAP not reachable"</i>; the ERP tab and demo cases wait ~20 s per SAP call and then show that message. The deploy workflow still goes green (its
+    health check only <i>warns</i> when SAP is unreachable). When SAP confirms: <code>Test-NetConnection 65.2.76.131 -Port 3357</code> → True, then
+    <code>nssm restart ap-engine</code> — nothing else to change.</span></div>
+  </div></div>
+</section>
+
+<!-- PHASE 2 -->
+<section class="phase">
+  <div class="phase-header"><div class="phase-number">2</div><div><h2>Phase 2 — First deploy</h2><p>Fast path: let the GitHub workflow do it</p></div></div>
+  <div class="ok" style="display:block">
+    <b>⚡ Fast path — what the push does for you.</b> The workflow (<code>deploy.yml</code>) now performs Steps 6a, 7, 8, 9 and 10b by itself on the first
+    run and skips them on later runs. What you still do by hand, once:
+    <table style="margin:10px 0 4px">
+      <tr><th>Manual (once)</th><th>Automatic on every push</th></tr>
+      <tr><td>Steps 1–4 (ports, folders, Python 3.12, SAP SDK + VC++)<br>
+        <b>.env</b>: either the GitHub secret <code>AP_ENV_FILE</code> (Step 12, option B — recommended) or the file <code>E:\APEngine\app\.env</code> (Step 6c)<br>
+        Step 10a (AWS security group, port 2000)<br>
+        Step 11 (the runner)<br>
+        Step 5 request to SAP — last</td>
+        <td>Copy code to <code>E:\APEngine\app</code> (6a)<br>venv + <code>pip install</code> + SAP SDK load check (7)<br>
+        Windows service <code>ap-engine</code> via NSSM (8)<br>Nginx site on port 2000 + reload (9)<br>Windows Firewall rule for 2000 (10b)<br>
+        Start + health check</td></tr>
+    </table>
+    Order: Steps 1–4 → 12 (secret) → 10a → 11 (runner) → push (Step 13) → check http://13.207.66.222:2000 → Step 5 request to SAP.
+    Steps 6–9 below remain as the manual way / for troubleshooting.
+  </div>
+
+  <div class="step" id="s6"><div class="step-header" onclick="toggle(this)"><div class="step-num">6</div><h3>Clone the code and create the server .env</h3><span class="where">EC2 · PowerShell + Notepad</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <h4>6a — Clone</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>git clone https://github.com/SaiPrasadEruventi-ava/AP_Automation_Agent.git E:\APEngine\app</pre>
+    <p>If asked to sign in: GitHub username + a <b>personal access token</b> (GitHub → Settings → Developer settings → Tokens) as the password.</p>
+
+    <h4>6b — Generate a trigger secret (used by the dashboard buttons)</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>py -3.12 -c "import secrets; print(secrets.token_urlsafe(32))"</pre>
+
+    <h4>6c — Create <code>E:\APEngine\app\.env</code></h4>
+    <div class="danger"><span>🚨</span><span>This file holds passwords. It lives <b>only on the server</b> — never commit it, never put real values into <code>.env.example</code> (GitHub push protection will block the push, as it did before).</span></div>
+    <p>Open Notepad (as Administrator) → paste the block below → fill the <code>&lt;…&gt;</code> values (copy them from your laptop's <code>.env</code>) → <b>File → Save As</b> → folder <code>E:\APEngine\app</code> → Save as type: <b>All Files</b> → File name <code>.env</code> → Encoding <b>UTF-8</b> → Save.</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button># ── ERP: live SAP ───────────────────────────────────────────
+AP_ERP_SOURCE=sap
+SAP_ACTIVE_SYSTEM=S4
+SAPNWRFC_HOME=C:\sap\nwrfcsdk
+
+SAP_S4_ASHOST=65.2.76.131
+SAP_S4_SYSNR=57
+SAP_S4_CLIENT=100
+SAP_S4_USER=RPA
+SAP_S4_PASSWD=&lt;SAP password of RPA&gt;
+SAP_S4_LANG=EN
+
+# post = post/park/reverse invoices in SAP;  simulate = nothing written
+SAP_INVOICE_MODE=post
+SAP_FREIGHT_TAX_CODE=I0
+
+# ── App ─────────────────────────────────────────────────────
+AP_TRIGGER_SECRET=&lt;value from 6b&gt;
+AP_APPROVAL_PORTAL_URL=http://13.207.66.222:2000
+VARIANCE_THRESHOLD_PCT=2.0
+
+# ── PDF reading (auto = AI first, rule-based reader as fallback)
+AP_EXTRACTOR=auto
+MISTRAL_API_KEY=&lt;Mistral key, or leave empty&gt;
+
+# ── Persistent logs (recommended; empty = in-memory, lost on restart)
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+
+# ── Mail (optional; without it result emails are saved as HTML files)
+AP_MAIL_PROVIDER=gmail
+AP_NOTIFY_EMAIL=&lt;email&gt;
+AP_REVIEWER_EMAIL=&lt;email&gt;</pre>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="c"># Verify it is really ".env" (not ".env.txt")</span>
+dir E:\APEngine\app\.env</pre>
+  </div></div>
+
+  <div class="step" id="s7"><div class="step-header" onclick="toggle(this)"><div class="step-num">7</div><h3>Python environment + a manual test run</h3><span class="where">EC2 · PowerShell</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <h4>7a — Create the venv and install packages (2–5 minutes)</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>cd E:\APEngine\app
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
+.\.venv\Scripts\python.exe -m pip install -r requirements-local.txt</pre>
+    <p>You will see <i>"pyrfc 3.3.1 is yanked"</i> — expected: SAP stopped maintaining pyrfc, but this pinned version installs and works.</p>
+
+    <h4>7b — Prove the SAP SDK loads and SAP answers</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>.\.venv\Scripts\python.exe -c "import pyrfc; print('pyrfc', pyrfc.__version__)"
+.\.venv\Scripts\python.exe -c "import sap_connector, json; print(json.dumps(sap_connector.ping(), indent=1))"</pre>
+    <p><b>Expected:</b> <code>pyrfc 3.3.1</code>, then <code>"ok": true</code>, <code>"sysid": "A4F"</code>. If not, see Troubleshooting.</p>
+    <div class="info"><span>ℹ</span><span><b>Before SAP has allowed the server's IP:</b> only the first line (<code>pyrfc 3.3.1</code>) can pass — that proves the SDK is installed correctly.
+    The ping will return <code>"ok": false</code> with <i>"partner '65.2.76.131:3357' not reached"</i> after ~20 s. That is expected; carry on.</span></div>
+
+    <h4>7c — Start the app by hand once</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>.\.venv\Scripts\python.exe -m uvicorn api.index:app --host 127.0.0.1 --port 8200</pre>
+    <p>Leave it running. On the server, open a browser at <b>http://127.0.0.1:8200</b> — the dashboard with a green <b>Live SAP</b> bar must appear. Then press <kbd>Ctrl</kbd>+<kbd>C</kbd> in PowerShell to stop it.</p>
+  </div></div>
+
+  <div class="step" id="s8"><div class="step-header" onclick="toggle(this)"><div class="step-num">8</div><h3>Run it as a Windows service with NSSM</h3><span class="where">EC2 · PowerShell (Admin)</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>nssm install ap-engine "E:\APEngine\app\.venv\Scripts\python.exe" "-m uvicorn api.index:app --host 127.0.0.1 --port 8200"
+nssm set ap-engine AppDirectory "E:\APEngine\app"
+nssm set ap-engine AppEnvironmentExtra "SAPNWRFC_HOME=C:\sap\nwrfcsdk" "PYTHONIOENCODING=utf-8"
+nssm set ap-engine AppStdout "E:\APEngine\logs\ap-engine.out.log"
+nssm set ap-engine AppStderr "E:\APEngine\logs\ap-engine.err.log"
+nssm set ap-engine AppRotateFiles 1
+nssm set ap-engine AppRotateBytes 10485760
+nssm set ap-engine Start SERVICE_AUTO_START
+nssm set ap-engine DisplayName "AP Engine (SAP 3-way match)"
+nssm start ap-engine
+nssm status ap-engine</pre>
+    <p><b>Expected:</b> <code>SERVICE_RUNNING</code>. Check it answers (first SAP logon takes a few seconds):</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>Invoke-RestMethod http://127.0.0.1:8200/api/sap/health</pre>
+    <div class="info"><span>ℹ</span><span>The app writes its log to <code>E:\APEngine\logs\ap-engine.err.log</code> (uvicorn logs to stderr — that's normal, not only errors).</span></div>
+  </div></div>
+
+  <div class="step" id="s9"><div class="step-header" onclick="toggle(this)"><div class="step-num">9</div><h3>Nginx: publish the app on port 2000</h3><span class="where">EC2 · PowerShell</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <div class="note"><span>⚠</span><span>Same pattern as Avagama: <b>do not edit nginx.conf</b> beyond the single <code>include conf.d/*.conf;</code> line that Avagama already added. The AP Engine gets its own file.</span></div>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><span class="c"># the include line must already exist (from Avagama setup):</span>
+Select-String -Path C:\nginx\nginx-1.30.0\conf\nginx.conf -Pattern "conf.d"
+
+<span class="c"># copy the site file from the repo</span>
+Copy-Item E:\APEngine\app\deploy\ec2\ap-engine.conf C:\nginx\nginx-1.30.0\conf\conf.d\ap-engine.conf
+
+<span class="c"># test, then reload with zero downtime for the other apps</span>
+cd C:\nginx\nginx-1.30.0
+.\nginx.exe -t
+.\nginx.exe -s reload</pre>
+    <p><code>nginx -t</code> must print <b>syntax is ok</b> and <b>test is successful</b> before you reload. If <code>-s reload</code> says <i>OpenEvent("Global
+gx_reload_…") failed (5: Access is denied)</i>, Nginx runs as an NSSM service under SYSTEM — use <code>nssm restart nginx</code> instead (a ~1 s blip for the other sites).</p>
+    <p>What the file does: listens on <b>2000</b>, proxies everything to <code>127.0.0.1:8200</code>, allows 25 MB PDF uploads, and waits up to 300 s (SAP posting and "Reset all demo cases" can be slow).</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>Invoke-WebRequest http://localhost:2000 -UseBasicParsing | Select-Object StatusCode
+<span class="c"># Expected: 200</span></pre>
+  </div></div>
+
+  <div class="step" id="s10"><div class="step-header" onclick="toggle(this)"><div class="step-num">10</div><h3>Open port 2000 (AWS + Windows Firewall)</h3><span class="where">AWS Console + EC2</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <h4>10a — AWS Security Group</h4>
+    <p>AWS Console → EC2 → Instances → <b>i-0e3ed83842b7879d7</b> (public IP 13.207.66.222) → Security → Security group → <b>Edit inbound rules</b> → <b>Add rule</b>:</p>
+    <table><tr><th>Type</th><th>Port</th><th>Source</th><th>Description</th></tr>
+      <tr><td>Custom TCP</td><td><code>2000</code></td><td>0.0.0.0/0 (or your office IPs)</td><td>AP Engine</td></tr></table>
+    <p>Do <b>not</b> open 8200 — it stays internal.</p>
+    <h4>10b — Windows Firewall on the EC2</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>New-NetFirewallRule -DisplayName "AP Engine 2000" -Direction Inbound -Protocol TCP -LocalPort 2000 -Action Allow</pre>
+    <h4>10c — Test from your laptop</h4>
+    <p>Open <b>http://13.207.66.222:2000</b> — the AP Engine dashboard with the green <b>Live SAP</b> bar.</p>
+  </div></div>
+</section>
+
+<!-- PHASE 3 -->
+<section class="phase">
+  <div class="phase-header"><div class="phase-number">3</div><div><h2>Phase 3 — CI/CD with GitHub Actions</h2><p>Every push to main deploys automatically</p></div></div>
+
+  <div class="step" id="s11"><div class="step-header" onclick="toggle(this)"><div class="step-num">11</div><h3>Create GitHub runner #3 for AP_Automation_Agent</h3><span class="where">GitHub + EC2 PowerShell (Admin)</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <h4>11a — Get a registration token</h4>
+    <p>GitHub → <b>SaiPrasadEruventi-ava/AP_Automation_Agent</b> → Settings → Actions → Runners → <b>New self-hosted runner</b> → Windows / x64.
+    In the "Configure" block, copy only the token after <code>--token</code> (looks like <code>CEK7AWV…</code>, about 29 letters/digits). <b>It expires after 1 hour.</b></p>
+    <p>Paste it here — every command below fills in automatically (it stays in this page only, nothing is sent anywhere):</p>
+    <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+      <input id="runnerToken" placeholder="paste the runner token here" autocomplete="off" spellcheck="false"
+        style="flex:1;min-width:280px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--code-bg);color:#79c0ff;font-family:'Cascadia Code',monospace;font-size:13px">
+      <span id="tokenState" style="font-size:12px;color:var(--muted)">no token yet</span>
+    </div>
+
+    <h4>11b — Go to the runner folder</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>mkdir E:\APEngine\actions-runner -Force
+cd E:\APEngine\actions-runner</pre>
+
+    <h4>11c — Download and extract (skip if already done)</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>Invoke-WebRequest -Uri https://github.com/actions/runner/releases/download/v2.333.1/actions-runner-win-x64-2.333.1.zip -OutFile actions-runner-win-x64-2.333.1.zip</pre>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>if((Get-FileHash -Path actions-runner-win-x64-2.333.1.zip -Algorithm SHA256).Hash.ToUpper() -ne 'd0c4fcb91f8f0754d478db5d61db533bba14cad6c4676a9b93c0b7c2a3969aa0'.ToUpper()){ throw 'Computed checksum did not match' }</pre>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>Add-Type -AssemblyName System.IO.Compression.FileSystem
+[System.IO.Compression.ZipFile]::ExtractToDirectory("$PWD/actions-runner-win-x64-2.333.1.zip", "$PWD")</pre>
+    <div class="info"><span>ℹ</span><span>If GitHub's page shows a <b>different version</b> in its Download block, use its <code>Invoke-WebRequest</code> and hash lines instead of the two above.</span></div>
+
+    <h4>11d — Configure as a Windows service (replaces GitHub's config.cmd + run.cmd)</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>./config.cmd --url https://github.com/SaiPrasadEruventi-ava/AP_Automation_Agent --token <span class="tok">PASTE_TOKEN_HERE</span> --name ap-engine-ec2 --labels ap-engine --work _work --runasservice --windowslogonaccount "NT AUTHORITY\SYSTEM" --unattended</pre>
+    <div class="danger"><span>🚨</span><span><b>Do not run <code>./run.cmd</code></b> (GitHub's page shows it). It only runs while that PowerShell window stays open.
+    <code>--runasservice</code> above installs the runner as a <b>Windows service</b> instead — it keeps running after you log off and starts by itself after a reboot.</span></div>
+    <table>
+      <tr><th>Option</th><th>Why</th></tr>
+      <tr><td><code>--labels ap-engine</code></td><td><code>deploy.yml</code> asks for <code>[self-hosted, windows, ap-engine]</code> — this job never lands on the Avagama runners (and Avagama jobs never land here).</td></tr>
+      <tr><td><code>--runasservice</code></td><td>Installs and starts the runner as an auto-starting Windows service.</td></tr>
+      <tr><td><code>"NT AUTHORITY\SYSTEM"</code></td><td>The deploy must stop/start the <code>ap-engine</code> service, restart Nginx and write to <code>E:\APEngine\app</code> — the default NETWORK SERVICE account is not allowed to.</td></tr>
+      <tr><td><code>--unattended</code></td><td>No questions asked — all answers are in the command.</td></tr>
+    </table>
+
+    <h4>11e — Verify</h4>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>Get-Service actions.runner.* | Select-Object Name, Status, StartType
+<span class="c"># Expected: Status Running, StartType Automatic</span></pre>
+    <p>✅ GitHub → AP_Automation_Agent → Settings → Actions → Runners → <b>ap-engine-ec2</b> shows <b>Idle</b> with labels <code>self-hosted</code> <code>Windows</code> <code>X64</code> <code>ap-engine</code>.</p>
+
+    <h4>If 11d fails</h4>
+    <table>
+      <tr><th>Message</th><th>Fix</th></tr>
+      <tr><td><i>token expired</i> / <i>404 Not Found</i></td><td>Get a fresh token (11a), paste it in the box above, re-run only 11d</td></tr>
+      <tr><td><i>already configured</i></td><td>Run the remove command below, then 11d again</td></tr>
+      <tr><td><i>Access denied</i></td><td>PowerShell is not "Run as Administrator"</td></tr>
+    </table>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>./config.cmd remove --token <span class="tok">PASTE_TOKEN_HERE</span></pre>
+  </div></div>
+
+  <div class="step" id="s12"><div class="step-header" onclick="toggle(this)"><div class="step-num">12</div><h3>GitHub secret AP_ENV_FILE (optional)</h3><span class="where">GitHub</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <p>Two ways to manage the server's <code>.env</code> — pick one:</p>
+    <table>
+      <tr><th>Option</th><th>How</th></tr>
+      <tr><td><b>A — keep it on the server</b> (simplest)</td><td>Do nothing. The workflow never overwrites <code>E:\APEngine\app\.env</code>. To change a value: edit the file via RDP, then <code>nssm restart ap-engine</code>.</td></tr>
+      <tr><td><b>B — manage it in GitHub</b> (like Avagama's ENV_FILE)</td><td>GitHub → repo → Settings → Secrets and variables → Actions → <b>New repository secret</b> → Name <code>AP_ENV_FILE</code> → paste the whole <code>.env</code> content. Every deploy then rewrites the server's <code>.env</code> from it.</td></tr>
+    </table>
+  </div></div>
+
+  <div class="step" id="s13"><div class="step-header" onclick="toggle(this)"><div class="step-num">13</div><h3>The workflow: .github/workflows/deploy.yml</h3><span class="where">Repo (already added)</span><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <p>The file is already in the repo. What each step does on every push to <code>main</code>:</p>
+    <table>
+      <tr><th>#</th><th>Step</th><th>What happens on the EC2</th></tr>
+      <tr><td>1</td><td>Checkout code</td><td>Fresh copy of the repo in the runner's <code>_work</code> folder</td></tr>
+      <tr><td>2</td><td>Stop the app</td><td><code>nssm stop ap-engine</code>, waits until it is really stopped, kills any leftover <code>python.exe</code> running from <code>E:\APEngine\app\.venv</code> (e.g. a manual test run), and checks port 8200 is free — <b>before</b> anything is copied (the Python equivalent of stopping the PM2 process)</td></tr>
+      <tr><td>3</td><td>Copy code</td><td><code>robocopy</code> into <code>E:\APEngine\app</code> — keeps <code>.env</code>, <code>.venv</code>, logs</td></tr>
+      <tr><td>4</td><td>Write .env</td><td>From secret <code>AP_ENV_FILE</code> if set, otherwise keeps the server's file</td></tr>
+      <tr><td>5</td><td>Python environment</td><td>Creates <code>.venv</code> if missing, <code>pip install -r requirements-local.txt</code>, checks the SAP SDK loads (<code>import pyrfc</code>)</td></tr>
+      <tr><td>5b</td><td>One-time setup</td><td>Creates the <code>ap-engine</code> NSSM service, installs the Nginx site <code>conf.d\ap-engine.conf</code> (tests with <code>nginx -t</code> before reloading — a bad file is removed, other apps unaffected), adds the Windows Firewall rule for 2000. Each part is skipped when it already exists.</td></tr>
+      <tr><td>6</td><td>Start the service</td><td><code>nssm start ap-engine</code> (runs even if an earlier step failed, so the app comes back)</td></tr>
+      <tr><td>7</td><td>Health check</td><td>Calls <code>/api/sap/health</code>; fails the run if the app doesn't answer; warns if SAP is unreachable</td></tr>
+    </table>
+    <h4>Trigger the first automatic deploy</h4>
+    <p>On your laptop (PowerShell in the project folder):</p>
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>git add .github/workflows/deploy.yml deploy/ec2/ap-engine.conf Docs/EC2_DEPLOYMENT_GUIDE.html
+git commit -m "EC2 deployment: GitHub Actions workflow, Nginx site on port 2000, deployment guide"
+git push sapagent main</pre>
+    <p>GitHub → AP_Automation_Agent → <b>Actions</b> → "Deploy AP Engine" → all steps green. You can also re-run it any time with <b>Run workflow</b> (no code change needed).</p>
+    <div class="note"><span>⚠</span><span>Push this only to <code>sapagent</code> (AP_Automation_Agent). If the workflow ever reaches the old <code>origin</code> repo, its job just waits forever for an <code>ap-engine</code> runner there — harmless, but cancel it.</span></div>
+  </div></div>
+</section>
+
+<!-- CHECKLIST -->
+<section class="phase" id="checklist">
+  <div class="phase-header"><div class="phase-number">✓</div><div><h2>Final checklist</h2><p>Ticks are remembered in this browser</p></div></div>
+  <div class="step"><div class="step-header" onclick="toggle(this)"><div class="step-num">✓</div><h3>Go-live checklist</h3><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <div class="bar"><div id="bar"></div></div><div class="bar-label" id="barLabel"></div>
+    <ul class="checklist" id="cl">
+      <li><input type="checkbox"><span><b>(last)</b> SAP allowed 13.207.66.222: <code>Test-NetConnection 65.2.76.131 -Port 3357</code> → <b>True</b>, then <code>nssm restart ap-engine</code></span></li>
+      <li><input type="checkbox"><span><code>dir C:\sap\nwrfcsdk\lib</code> shows <b>sapnwrfc.dll</b>; <code>msvcr120.dll</code> present</span></li>
+      <li><input type="checkbox"><span><code>py -3.12 --version</code> works</span></li>
+      <li><input type="checkbox"><span><code>import pyrfc</code> works and <code>sap_connector.ping()</code> returns <b>ok: true, sysid A4F</b></span></li>
+      <li><input type="checkbox"><span><code>nssm status ap-engine</code> → <b>SERVICE_RUNNING</b></span></li>
+      <li><input type="checkbox"><span><code>nginx -t</code> OK and <code>http://localhost:2000</code> returns 200 on the server</span></li>
+      <li><input type="checkbox"><span><b>http://13.207.66.222:2000</b> opens from your laptop with a green <b>Live SAP</b> bar</span></li>
+      <li><input type="checkbox"><span>Avagama still works: <code>http://13.207.66.222:3000</code> and <code>:5000</code> unchanged</span></li>
+      <li><input type="checkbox"><span>Runner <b>ap-engine-ec2</b> shows <b>Idle</b> in GitHub</span></li>
+      <li><input type="checkbox"><span>Push to <code>main</code> → Actions run <b>green</b> (all 7 steps)</span></li>
+      <li><input type="checkbox"><span>Demo: <b>Reset all demo cases</b> → Run S01 → <b>Posted in SAP</b>; Run S03 → <b>Parked</b> → Approve in review link (<code>…:2000/review/…</code>) → Posted</span></li>
+      <li><input type="checkbox"><span>Reboot test: restart the EC2 → ap-engine, nginx and the runner all come back on their own</span></li>
+    </ul>
+  </div></div>
+</section>
+
+<!-- OPS -->
+<section class="phase" id="ops">
+  <div class="phase-header"><div class="phase-number">⚙</div><div><h2>Day-to-day commands</h2><p>Run on the EC2 in PowerShell (Admin)</p></div></div>
+  <div class="step"><div class="step-header" onclick="toggle(this)"><div class="step-num">R</div><h3>Service, logs, redeploy</h3><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button>nssm status  ap-engine
+nssm restart ap-engine          <span class="c"># after editing E:\APEngine\app\.env</span>
+nssm stop    ap-engine
+nssm start   ap-engine
+
+<span class="c"># live log (Ctrl+C to stop following)</span>
+Get-Content E:\APEngine\logs\ap-engine.err.log -Tail 50 -Wait
+
+<span class="c"># app + SAP health</span>
+Invoke-RestMethod http://127.0.0.1:8200/api/sap/health
+
+<span class="c"># demo cases: live status in SAP / full end-to-end test (resets SAP at the end)</span>
+cd E:\APEngine\app
+.\.venv\Scripts\python.exe sap_demo_setup.py --list
+.\.venv\Scripts\python.exe smoke_test_sap.py</pre>
+    <table>
+      <tr><th>Task</th><th>How</th></tr>
+      <tr><td>Redeploy without a code change</td><td>GitHub → Actions → Deploy AP Engine → <b>Run workflow</b></td></tr>
+      <tr><td>Roll back</td><td><code>git revert &lt;bad commit&gt;</code> on your laptop → <code>git push sapagent main</code></td></tr>
+      <tr><td>Change SAP / Mistral settings</td><td>Edit <code>E:\APEngine\app\.env</code> (or the <code>AP_ENV_FILE</code> secret) → <code>nssm restart ap-engine</code></td></tr>
+      <tr><td>Runner service</td><td><code>services.msc</code> → "GitHub Actions Runner (…ap-engine-ec2)" → Restart</td></tr>
+    </table>
+  </div></div>
+</section>
+
+<!-- TROUBLE -->
+<section class="phase" id="trouble">
+  <div class="phase-header"><div class="phase-number">!</div><div><h2>Troubleshooting</h2><p>Symptom → cause → fix</p></div></div>
+  <div class="step"><div class="step-header" onclick="toggle(this)"><div class="step-num">?</div><h3>Common problems</h3><span class="step-arrow">▼</span></div>
+  <div class="step-body">
+    <table>
+      <tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr>
+      <tr><td><code>import pyrfc</code> → <i>DLL load failed</i></td><td>SDK not at <code>C:\sap\nwrfcsdk</code>, <code>SAPNWRFC_HOME</code> not set, or VC++ 2013 missing</td><td>Re-check Step 4; reopen PowerShell; for the service: <code>nssm get ap-engine AppEnvironmentExtra</code></td></tr>
+      <tr><td><i>partner '65.2.76.131:3357' not reached</i></td><td>Network / firewall between EC2 and SAP</td><td>Step 5 must be True — ask SAP Basis to allow 13.207.66.222</td></tr>
+      <tr><td><i>RFC_LOGON_FAILURE</i></td><td>Wrong <code>SAP_S4_USER/PASSWD</code>, or the user is locked</td><td>Fix <code>.env</code> → restart service; ask Basis to unlock (SU01)</td></tr>
+      <tr><td><i>hostname … unknown</i></td><td>Using the old hostname</td><td><code>SAP_S4_ASHOST=65.2.76.131</code> (the IP)</td></tr>
+      <tr><td>Browser: <b>502 Bad Gateway</b> on :2000</td><td>App service not running</td><td><code>nssm status ap-engine</code>; read <code>ap-engine.err.log</code></td></tr>
+      <tr><td>Browser: <b>504 Gateway Timeout</b></td><td>A long SAP call exceeded the proxy timeout</td><td>Check <code>proxy_read_timeout 300s</code> in <code>ap-engine.conf</code>; reload Nginx</td></tr>
+      <tr><td>:2000 not reachable from laptop</td><td>Security group or Windows Firewall</td><td>Step 10a and 10b</td></tr>
+      <tr><td>Workflow stuck in <b>Queued</b></td><td>Runner offline or label mismatch</td><td>Runner must be Idle with label <code>ap-engine</code>; restart its service</td></tr>
+      <tr><td>Workflow: <i>Access denied</i> / nssm fails</td><td>Runner service runs as NETWORK SERVICE</td><td>Reconfigure with <code>--windowslogonaccount "NT AUTHORITY\SYSTEM"</code> (11c)</td></tr>
+      <tr><td>Workflow: <i>py is not recognized</i></td><td>Python not installed for all users</td><td>Reinstall Python 3.12 "for all users" (Step 3), restart the runner service</td></tr>
+      <tr><td>SAP: <i>Posting only possible in periods 2026/04 …</i></td><td>MM periods on A4F still at 04/2026</td><td>Expected — the app posts with 30.04.2026 automatically; manual MR8M reversals need that date too</td></tr>
+      <tr><td>Upload: <i>HTTP 429 rate limit</i></td><td>Mistral account quota used up</td><td>Nothing to do — the rule-based reader takes over (or set a new <code>MISTRAL_API_KEY</code>)</td></tr>
+      <tr><td>Status column: "Already posted in SAP … click Reset"</td><td>App restarted with in-memory logs; SAP still has the documents</td><td>Click <b>Reset all demo cases</b>; set Upstash Redis to keep logs across restarts</td></tr>
+    </table>
+  </div></div>
+</section>
+
+</main>
+
+<script>
+  function toggle(h) {
+    const b = h.nextElementSibling, a = h.querySelector('.step-arrow');
+    const collapsed = b.classList.toggle('collapsed');
+    a.style.transform = collapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
+  }
+  function copyCode(btn) {
+    const text = btn.parentElement.innerText.replace(/^Copy\n?/, '').trim();
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'Copied!'; btn.style.color = '#22c55e';
+      setTimeout(() => { btn.textContent = 'Copy'; btn.style.color = ''; }, 1800);
+    });
+  }
+  // Runner token box (Step 11): fills every command; kept for this tab only.
+  const tokIn = document.getElementById('runnerToken');
+  function applyToken() {
+    const v = (tokIn.value || '').trim();
+    document.querySelectorAll('.tok').forEach(s => { s.textContent = v || 'PASTE_TOKEN_HERE'; s.style.color = v ? '#22c55e' : ''; });
+    document.getElementById('tokenState').textContent = v ? '✓ filled into the commands below' : 'no token yet';
+    try { sessionStorage.setItem('runnerToken', v); } catch (e) {}
+  }
+  if (tokIn) {
+    try { tokIn.value = sessionStorage.getItem('runnerToken') || ''; } catch (e) {}
+    tokIn.addEventListener('input', applyToken);
+    applyToken();
+  }
+  const boxes = document.querySelectorAll('#cl input');
+  function progress() {
+    const done = [...boxes].filter(b => b.checked).length;
+    document.getElementById('bar').style.width = Math.round(done / boxes.length * 100) + '%';
+    document.getElementById('barLabel').textContent = done + ' / ' + boxes.length + ' completed';
+    try { localStorage.setItem('apEngineChecklist', JSON.stringify([...boxes].map(b => b.checked))); } catch (e) {}
+  }
+  try { (JSON.parse(localStorage.getItem('apEngineChecklist')) || []).forEach((v, i) => { if (boxes[i]) boxes[i].checked = v; }); } catch (e) {}
+  boxes.forEach(b => b.addEventListener('change', progress));
+  progress();
+</script>
+</body>
+</html>
